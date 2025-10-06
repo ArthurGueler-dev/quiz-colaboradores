@@ -1,4 +1,5 @@
-const API_BASE = 'https://floripa.in9automacao.com.br';
+// API relativa - usa o próprio backend Node.js
+const API_BASE = '';
 
 function api(path){
 	return `${API_BASE}${path}`;

@@ -1,7 +1,8 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-const API_BASE = 'https://floripa.in9automacao.com.br';
+// API relativa - usa o próprio backend Node.js
+const API_BASE = '';
 // Força modo simulado para funcionar sem backend (servidor estático)
 // Altere para false para usar a API real APÓS fazer upload das APIs
 const USE_MOCKS = false; // false = usa APIs reais no servidor

@@ -1,0 +1,9 @@
+node_modules/
+db/*.db
+db/*.db-journal
+logs/
+*.log
+.env
+.DS_Store
+Thumbs.db
+nul
