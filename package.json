@@ -1,0 +1,20 @@
+{
+  "name": "quiz-totem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quiz de colaboradores (totem) - Node.js + Express + SQLite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "express": "^4.19.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

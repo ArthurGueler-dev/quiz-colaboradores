@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>Cadastro - Quiz dos Colaboradores</title>
+	<link rel="stylesheet" href="/style.css">
+	<link rel="icon" href="/cropped-design_sem_nome_transparent.png">
+	<style>
+		.cadastro-container{
+			max-width:500px;
+			margin:0 auto;
+			padding:40px 24px;
+			min-height:100vh;
+			display:flex;
+			flex-direction:column;
+			justify-content:center;
+		}
+		.form-group{margin-bottom:20px}
+		.form-group label{
+			display:block;
+			margin-bottom:8px;
+			color:#cbd5e1;
+			font-weight:600;
+			font-size:14px;
+		}
+		.form-group input{
+			width:100%;
+			padding:14px 16px;
+			border-radius:12px;
+			border:2px solid #333;
+			background:rgba(30,30,30,0.8);
+			color:#fff;
+			font-size:16px;
+			transition:all 0.2s;
+			font-family:inherit;
+		}
+		.form-group input:focus{
+			outline:none;
+			border-color:#cc1b28;
+			background:rgba(30,30,30,0.95);
+			box-shadow:0 0 0 3px rgba(204,27,40,0.1);
+		}
+		.form-group small{
+			display:block;
+			margin-top:6px;
+			color:#94a3b8;
+			font-size:13px;
+		}
+		.btn-group{display:flex;gap:12px;margin-top:32px}
+		.btn{
+			flex:1;
+			padding:16px;
+			border-radius:12px;
+			border:none;
+			font-size:16px;
+			font-weight:700;
+			cursor:pointer;
+			transition:all 0.2s;
+			font-family:inherit;
+		}
+		.btn-primario{
+			background:#cc1b28;
+			color:#fff;
+			box-shadow:0 4px 12px rgba(204,27,40,0.3);
+		}
+		.btn-primario:hover{
+			background:#d81f2b;
+			transform:translateY(-1px);
+			box-shadow:0 6px 16px rgba(204,27,40,0.4);
+		}
+		.btn-primario:disabled{
+			background:#666;
+			cursor:not-allowed;
+			transform:none;
+			box-shadow:none;
+		}
+		.btn-secundario{
+			background:rgba(51,51,51,0.8);
+			color:#fff;
+			border:2px solid #444;
+		}
+		.btn-secundario:hover{
+			background:rgba(68,68,68,0.9);
+			border-color:#555;
+		}
+		.msg{
+			margin-top:20px;
+			padding:16px;
+			border-radius:12px;
+			text-align:center;
+			font-weight:600;
+			animation:slideIn 0.3s ease-out;
+		}
+		@keyframes slideIn{
+			from{opacity:0;transform:translateY(-10px)}
+			to{opacity:1;transform:translateY(0)}
+		}
+		.msg.success{
+			background:rgba(34,197,94,0.15);
+			color:#4ade80;
+			border:2px solid #22c55e;
+		}
+		.msg.error{
+			background:rgba(239,68,68,0.15);
+			color:#f87171;
+			border:2px solid #ef4444;
+		}
+		.titulo{text-align:center;margin-bottom:40px}
+		.titulo h1{
+			margin:0 0 12px;
+			color:#f8fafc;
+			font-size:32px;
+			font-weight:800;
+		}
+		.titulo p{
+			margin:0;
+			color:#94a3b8;
+			font-size:16px;
+		}
+		.back-link{
+			text-align:center;
+			margin-top:24px;
+		}
+		.back-link a{
+			color:#cc1b28;
+			text-decoration:none;
+			font-size:14px;
+			font-weight:600;
+			transition:color 0.2s;
+		}
+		.back-link a:hover{
+			color:#d81f2b;
+			text-decoration:underline;
+		}
+	</style>
+</head>
+<body>
+	<div class="cadastro-container">
+		<div class="titulo">
+			<h1>📝 Cadastro de Colaborador</h1>
+			<p>Preencha seus dados para participar do quiz</p>
+		</div>
+
+		<form id="form-cadastro">
+			<div class="form-group">
+				<label for="nome">Nome completo *</label>
+				<input type="text" id="nome" name="nome" required autocomplete="name" placeholder="Ex: João Pedro Silva">
+			</div>
+
+			<div class="form-group">
+				<label for="email">E-mail *</label>
+				<input type="email" id="email" name="email" required autocomplete="email" placeholder="Ex: joao@empresa.com">
+				<small>Este será seu login para acessar o quiz</small>
+			</div>
+
+			<div class="form-group">
+				<label for="cpf">CPF *</label>
+				<input type="text" id="cpf" name="cpf" required autocomplete="off" placeholder="000.000.000-00" maxlength="14">
+			</div>
+
+			<div class="form-group">
+				<label for="senha">Senha *</label>
+				<input type="password" id="senha" name="senha" required autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+				<small>Use uma senha segura</small>
+			</div>
+
+			<div class="form-group">
+				<label for="confirma-senha">Confirmar senha *</label>
+				<input type="password" id="confirma-senha" name="confirma_senha" required autocomplete="new-password" placeholder="Digite a senha novamente">
+			</div>
+
+			<div class="btn-group">
+				<button type="submit" class="btn btn-primario">Cadastrar</button>
+			</div>
+		</form>
+
+		<div id="msg"></div>
+
+		<div class="back-link">
+			<a href="/">← Voltar para o login</a>
+		</div>
+	</div>
+
+	<script>
+		const API_BASE = 'https://floripa.in9automacao.com.br';
+
+		// Validação de CPF
+		function validaCPF(cpf) {
+			cpf = cpf.replace(/\D/g, '');
+			if (cpf.length !== 11) return false;
+
+			// Verifica se todos os dígitos são iguais
+			if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+			// Valida primeiro dígito verificador
+			let soma = 0;
+			for (let i = 0; i < 9; i++) {
+				soma += parseInt(cpf.charAt(i)) * (10 - i);
+			}
+			let resto = 11 - (soma % 11);
+			let digito1 = resto >= 10 ? 0 : resto;
+
+			if (digito1 !== parseInt(cpf.charAt(9))) return false;
+
+			// Valida segundo dígito verificador
+			soma = 0;
+			for (let i = 0; i < 10; i++) {
+				soma += parseInt(cpf.charAt(i)) * (11 - i);
+			}
+			resto = 11 - (soma % 11);
+			let digito2 = resto >= 10 ? 0 : resto;
+
+			return digito2 === parseInt(cpf.charAt(10));
+		}
+
+		// Máscara de CPF
+		document.getElementById('cpf').addEventListener('input', (e) => {
+			let value = e.target.value.replace(/\D/g, '');
+			if (value.length <= 11) {
+				value = value.replace(/(\d{3})(\d)/, '$1.$2');
+				value = value.replace(/(\d{3})(\d)/, '$1.$2');
+				value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+				e.target.value = value;
+			}
+		});
+
+		document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
+			e.preventDefault();
+
+			const form = e.target;
+			const msgEl = document.getElementById('msg');
+			const submitBtn = form.querySelector('button[type="submit"]');
+
+			// Coleta dados do formulário
+			const dados = {
+				nome: form.nome.value.trim(),
+				email: form.email.value.trim(),
+				cpf: form.cpf.value.replace(/\D/g, ''), // Remove formatação
+				senha: form.senha.value
+			};
+
+			const confirmaSenha = form.confirma_senha.value;
+
+			// Validações básicas
+			if (!dados.nome || !dados.email || !dados.cpf || !dados.senha) {
+				msgEl.className = 'msg error';
+				msgEl.textContent = 'Todos os campos são obrigatórios';
+				return;
+			}
+
+			if (!validaCPF(dados.cpf)) {
+				msgEl.className = 'msg error';
+				msgEl.textContent = 'CPF inválido';
+				return;
+			}
+
+			if (dados.senha.length < 6) {
+				msgEl.className = 'msg error';
+				msgEl.textContent = 'A senha deve ter no mínimo 6 caracteres';
+				return;
+			}
+
+			if (dados.senha !== confirmaSenha) {
+				msgEl.className = 'msg error';
+				msgEl.textContent = 'As senhas não coincidem';
+				return;
+			}
+
+			submitBtn.disabled = true;
+			msgEl.className = 'msg';
+			msgEl.textContent = 'Cadastrando...';
+
+			try {
+				const response = await fetch(`${API_BASE}/cadastro_colaborador.php`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(dados)
+				});
+
+				const text = await response.text();
+				let data;
+
+				try {
+					data = JSON.parse(text);
+				} catch(e) {
+					throw new Error('Resposta inválida do servidor');
+				}
+
+				if (data.success) {
+					msgEl.className = 'msg success';
+					msgEl.textContent = `✅ Cadastro realizado com sucesso! Redirecionando para o login...`;
+
+					// Limpa o formulário
+					form.reset();
+
+					// Redireciona após 2 segundos
+					setTimeout(() => {
+						location.href = '/?email=' + encodeURIComponent(dados.email);
+					}, 2000);
+				} else {
+					throw new Error(data.error || 'Erro ao cadastrar');
+				}
+
+			} catch(err) {
+				msgEl.className = 'msg error';
+				msgEl.textContent = '❌ ' + err.message;
+				console.error('Erro no cadastro:', err);
+			} finally {
+				submitBtn.disabled = false;
+			}
+		});
+	</script>
+</body>
+</html>

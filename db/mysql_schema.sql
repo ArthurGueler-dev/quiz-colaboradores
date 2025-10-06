@@ -1,0 +1,26 @@
+-- MySQL schema
+CREATE TABLE IF NOT EXISTS Participantes (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	nome VARCHAR(200) NOT NULL,
+	foto_adulto VARCHAR(500) NOT NULL,
+	foto_crianca VARCHAR(500) NOT NULL,
+	codigo_unico VARCHAR(200) NOT NULL UNIQUE,
+	ja_jogou TINYINT(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS Respostas (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	participante_id INT NOT NULL,
+	colaborador_escolhido_id INT NOT NULL,
+	acertou TINYINT(1) NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_resp_part FOREIGN KEY (participante_id) REFERENCES Participantes(id) ON DELETE CASCADE,
+	CONSTRAINT fk_resp_colab FOREIGN KEY (colaborador_escolhido_id) REFERENCES Participantes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS Tokens (
+	token VARCHAR(64) PRIMARY KEY,
+	participante_id INT NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT fk_tok_part FOREIGN KEY (participante_id) REFERENCES Participantes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

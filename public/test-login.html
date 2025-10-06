@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API Login</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #111; color: #fff; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        input, button { padding: 10px; margin: 5px; font-size: 14px; }
+        button { background: #cc1b28; color: #fff; border: none; cursor: pointer; border-radius: 5px; }
+        pre { background: #000; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Teste de Login - API Admin</h1>
+
+    <div class="box">
+        <h3>1. Teste direto da API</h3>
+        <button onclick="testAPI()">Testar API (sem login)</button>
+        <pre id="api-result">Clique no botão acima...</pre>
+    </div>
+
+    <div class="box">
+        <h3>2. Teste de Login</h3>
+        <input type="text" id="username" placeholder="Usuário" value="">
+        <input type="password" id="password" placeholder="Senha" value="">
+        <button onclick="testLogin()">Testar Login</button>
+        <pre id="login-result">Preencha os campos acima...</pre>
+    </div>
+
+    <div class="box">
+        <h3>3. Informações de Debug</h3>
+        <pre id="debug-info"></pre>
+    </div>
+
+    <script>
+        const API_URL = 'https://floripa.in9automacao.com.br/admin_login_cpanel.php';
+
+        // Mostrar informações de debug
+        document.getElementById('debug-info').textContent =
+            `URL da API: ${API_URL}\n` +
+            `Hostname: ${location.hostname}\n` +
+            `Protocol: ${location.protocol}\n` +
+            `LocalStorage disponível: ${typeof localStorage !== 'undefined' ? 'Sim' : 'Não'}`;
+
+        async function testAPI() {
+            const el = document.getElementById('api-result');
+            el.textContent = 'Testando API...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET'
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    el.innerHTML = `<span class="error">❌ Resposta não é JSON válido</span>\n\nResposta:\n${text}`;
+                    return;
+                }
+
+                el.innerHTML = `<span class="success">✅ API respondeu!</span>\n\nStatus: ${response.status}\n\nResposta:\n${JSON.stringify(data, null, 2)}`;
+            } catch(err) {
+                el.innerHTML = `<span class="error">❌ Erro ao conectar</span>\n\nErro: ${err.message}\n\nDetalhes: ${err.stack}`;
+            }
+        }
+
+        async function testLogin() {
+            const el = document.getElementById('login-result');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                el.innerHTML = '<span class="error">❌ Preencha usuário e senha</span>';
+                return;
+            }
+
+            el.textContent = 'Enviando login...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const text = await response.text();
+                console.log('Response text:', text);
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    el.innerHTML = `<span class="error">❌ Resposta não é JSON válido</span>\n\nResposta bruta:\n${text}`;
+                    return;
+                }
+
+                if (data.success) {
+                    el.innerHTML = `<span class="success">✅ Login OK!</span>\n\nDados do usuário:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    el.innerHTML = `<span class="error">❌ Login falhou</span>\n\nErro: ${data.error || 'Desconhecido'}\n\nResposta completa:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch(err) {
+                el.innerHTML = `<span class="error">❌ Erro ao fazer login</span>\n\nErro: ${err.message}\n\nDetalhes: ${err.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

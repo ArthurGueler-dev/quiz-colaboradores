@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>Quiz dos Colaboradores</title>
+	<link rel="stylesheet" href="/style.css">
+	<link rel="icon" href="/cropped-design_sem_nome_transparent.png">
+</head>
+<body>
+	<div id="app">
+		<div class="tela" id="tela-login">
+			<div class="login-container">
+				<div class="logo-wrap-minimal">
+					<img class="logo-minimal" src="/cropped-design_sem_nome_transparent.png" alt="Logo">
+					<img class="logo-minimal" src="/images-removebg-preview.png" alt="Nova logo">
+				</div>
+				<div class="login-welcome">
+					<h1 class="welcome-title">Bem-vindo ao Quiz dos Colaboradores</h1>
+					<p class="welcome-subtitle">Entre com seu e-mail e senha</p>
+				</div>
+				<form id="form-login">
+					<input id="email" type="email" inputmode="email" autocomplete="email" placeholder="E-mail" required>
+					<input id="senha" type="password" autocomplete="current-password" placeholder="Senha" required>
+					<button type="submit" class="btn primario">Entrar</button>
+				</form>
+				<div id="login-msg" class="msg"></div>
+				<div style="text-align:center;margin-top:16px">
+					<a href="/cadastro.html" style="color:#cc1b28;text-decoration:none;font-size:14px">Não tem cadastro? Clique aqui</a>
+				</div>
+				<button id="btn-fullscreen" type="button" class="btn-minimal">Tela cheia</button>
+			</div>
+		</div>
+
+		<section id="tela-instrucoes" class="tela hidden">
+			<h2>Como funciona</h2>
+			<div class="instrucoes-wrap">
+				<div class="instr-card">
+					<div class="instr-num">1</div>
+					<div class="instr-body">
+						<h3>Veja a foto da infância</h3>
+						<p>Um colaborador quando criança aparecerá em destaque.</p>
+					</div>
+				</div>
+				<div class="instr-card">
+					<div class="instr-num">2</div>
+					<div class="instr-body">
+						<h3>Escolha a pessoa certa</h3>
+						<p>Toque em uma das 3 opções com foto e nome.</p>
+					</div>
+				</div>
+				<div class="instr-card">
+					<div class="instr-num">3</div>
+					<div class="instr-body">
+						<h3>Some pontos</h3>
+						<p>No final, mostramos quantos acertos você fez.</p>
+					</div>
+				</div>
+				<div class="instr-card">
+					<div class="instr-num">4</div>
+					<div class="instr-body">
+						<h3>Jogue apenas uma vez</h3>
+						<p>Seu código é único e só vale para uma participação.</p>
+					</div>
+				</div>
+			</div>
+			<div class="instr-cta">
+				<button id="btn-comecar" class="btn primario btn-grande">Começar</button>
+			</div>
+		</section>
+
+		<section id="tela-quiz" class="tela hidden">
+			<div class="cabecalho">
+				<div class="info">Pergunta <span id="contador"></span></div>
+			</div>
+			<div class="quiz-card">
+				<img id="foto-crianca" class="foto-crianca" alt="Foto da criança">
+			</div>
+			<div id="opcoes" class="grid-opcoes"></div>
+			<div class="footer small">Toque para responder</div>
+		</section>
+
+		<section id="tela-resultado" class="tela hidden">
+			<div class="resultado-card">
+				<h2>🎉 Resultado</h2>
+				<div class="resultado-score">
+					<div class="score-circle">
+						<span class="score-num" id="acertos">0</span>
+						<span class="score-total">de <span id="total">0</span></span>
+					</div>
+					<p class="score-text">Parabéns! Você completou o quiz.</p>
+				</div>
+				<button id="btn-reiniciar" class="btn primario btn-grande">Novo participante</button>
+			</div>
+		</section>
+	</div>
+
+	<script src="/app.js?v=8"></script>
+</body>
+</html>

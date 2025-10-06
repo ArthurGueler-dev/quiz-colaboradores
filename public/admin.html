@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>Painel Admin - Quiz</title>
+	<link rel="stylesheet" href="/style.css">
+	<link rel="icon" href="/cropped-design_sem_nome_transparent.png">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+	<style>
+		.admin-wrap{max-width:1200px;margin:0 auto;padding:16px}
+		.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+		.kpi{background:rgba(30,30,30,.8);border:1px solid #333;border-radius:14px;padding:16px}
+		.kpi .v{font-size:26px;font-weight:800}
+		.kpi .l{color:#9ca3af}
+		.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+		.card{background:rgba(30,30,30,.8);border:1px solid #333;border-radius:14px;padding:16px}
+		.table{width:100%;border-collapse:collapse}
+		.table th,.table td{padding:8px 10px;border-bottom:1px solid #333}
+		.table th{text-align:left;color:#9ca3af}
+		@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+		/* Login overlay */
+		.admin-login{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+		.admin-login .box{background:rgba(30,30,30,.95);border:1px solid #333;border-radius:16px;padding:20px;max-width:420px;width:90%}
+		.admin-login h2{margin:0 0 12px;text-align:center}
+		.admin-login .small{text-align:center;margin-bottom:12px}
+		.admin-login form{display:flex;gap:10px;flex-wrap:wrap}
+		.admin-login input{flex:1;min-width:160px;font-size:16px;padding:12px 14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff}
+		.admin-login button{padding:12px 16px;border-radius:10px;border:none;background:#cc1b28;color:#fff;cursor:pointer}
+		.admin-login .err{color:#fca5a5;margin-top:8px;text-align:center;min-height:18px}
+	</style>
+</head>
+<body>
+	<div id="admin-login" class="admin-login">
+		<div class="box">
+			<h2>Login do Painel</h2>
+			<p class="small">Entre com usuário e senha de administrador</p>
+			<form id="form-admin-login">
+				<input id="admin-user" type="text" placeholder="Usuário" required>
+				<input id="admin-pass" type="password" placeholder="Senha" required>
+				<button type="submit">Entrar</button>
+			</form>
+			<div id="admin-err" class="err"></div>
+		</div>
+	</div>
+
+	<div class="admin-wrap">
+		<h1>Painel Administrativo</h1>
+		<p class="small">Métricas de participação e desempenho</p>
+
+		<div class="kpis" id="kpis"></div>
+
+		<div class="grid">
+			<div class="card">
+				<h3>Partidas por dia (últimos 7 dias)</h3>
+				<canvas id="chartDia" height="140"></canvas>
+			</div>
+			<div class="card">
+				<h3>Distribuição de pontuações</h3>
+				<canvas id="chartDist" height="140"></canvas>
+			</div>
+		</div>
+
+		<div class="grid" style="margin-top:16px">
+			<div class="card">
+				<h3>🏆 Top Jogadores (Melhor Pontuação)</h3>
+				<table class="table" id="rankingMelhor">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Nome</th>
+							<th>Melhor</th>
+							<th>Média</th>
+							<th>Partidas</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="card">
+				<h3>📊 Ranking por Média (mín. 3 partidas)</h3>
+				<table class="table" id="rankingMedia">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Nome</th>
+							<th>Média</th>
+							<th>Partidas</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="grid" style="margin-top:16px">
+			<div class="card">
+				<h3>😰 Colaboradores mais difíceis</h3>
+				<table class="table" id="dificeis">
+					<thead>
+						<tr>
+							<th>Nome</th>
+							<th>Acertos</th>
+							<th>Total</th>
+							<th>Taxa</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="card">
+				<h3>😊 Colaboradores mais fáceis</h3>
+				<table class="table" id="faceis">
+					<thead>
+						<tr>
+							<th>Nome</th>
+							<th>Acertos</th>
+							<th>Total</th>
+							<th>Taxa</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="card" style="margin-top:16px">
+			<h3>📋 Participações recentes</h3>
+			<div style="margin-bottom:12px">
+				<button id="btnPrevPage" style="padding:6px 12px;margin-right:8px;background:#333;color:#fff;border:1px solid #444;border-radius:6px;cursor:pointer">← Anterior</button>
+				<button id="btnNextPage" style="padding:6px 12px;background:#333;color:#fff;border:1px solid #444;border-radius:6px;cursor:pointer">Próxima →</button>
+				<span id="pageInfo" style="margin-left:12px;color:#9ca3af"></span>
+			</div>
+			<table class="table" id="participacoes">
+				<thead>
+					<tr>
+						<th>Data/Hora</th>
+						<th>Nome</th>
+						<th>Email</th>
+						<th>Pontuação</th>
+						<th>%</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+		</div>
+	</div>
+	<script src="/admin.js?v=5"></script>
+</body>
+</html>

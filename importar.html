@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Importar Fotos - Quiz</title>
+	<link rel="stylesheet" href="style.css?v=9">
+</head>
+<body>
+	<div id="app">
+		<div class="tela active">
+			<div class="header">
+				<div class="logo-wrap">
+					<img src="logo1.png" alt="IN9 Automação" class="logo">
+					<img src="logo2.png" alt="FLORIPA" class="logo">
+				</div>
+			</div>
+
+			<div class="login-container" style="max-width: 700px;">
+				<h1>Importar Fotos dos Colaboradores</h1>
+				<p style="margin-bottom: 32px;">Clique no botão abaixo para importar automaticamente as fotos da pasta "Dia das Crianças" para o banco de dados.</p>
+
+				<button id="btn-importar" class="btn primario btn-grande">
+					Iniciar Importação
+				</button>
+
+				<div id="resultado" style="margin-top: 32px; display: none;">
+					<div id="resultado-conteudo"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const API_BASE = 'https://floripa.in9automacao.com.br';
+
+		document.getElementById('btn-importar').addEventListener('click', async () => {
+			const btn = document.getElementById('btn-importar');
+			const resultado = document.getElementById('resultado');
+			const conteudo = document.getElementById('resultado-conteudo');
+
+			btn.disabled = true;
+			btn.textContent = 'Importando...';
+			resultado.style.display = 'none';
+
+			try {
+				const response = await fetch(`${API_BASE}/importar_fotos.php`);
+				const data = await response.json();
+
+				resultado.style.display = 'block';
+
+				if (data.sucesso) {
+					conteudo.innerHTML = `
+						<div style="background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); border-radius: 12px; padding: 24px; color: #86efac;">
+							<h3 style="margin-top: 0; color: #4ade80;">✓ Importação concluída!</h3>
+							<p style="font-size: 1.1rem; margin: 8px 0;"><strong>Colaboradores importados:</strong> ${data.importados}</p>
+							${data.erros.length > 0 ? `
+								<details style="margin-top: 16px;">
+									<summary style="cursor: pointer; font-weight: 600;">Ver ${data.erros.length} avisos</summary>
+									<ul style="margin-top: 12px; text-align: left; font-size: 0.9rem; color: #fca5a5;">
+										${data.erros.map(err => `<li>${err}</li>`).join('')}
+									</ul>
+								</details>
+							` : ''}
+						</div>
+					`;
+				} else {
+					conteudo.innerHTML = `
+						<div style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); border-radius: 12px; padding: 24px; color: #fca5a5;">
+							<h3 style="margin-top: 0; color: #ef4444;">✗ Erro na importação</h3>
+							<p>${data.erro || 'Erro desconhecido'}</p>
+						</div>
+					`;
+				}
+			} catch (error) {
+				resultado.style.display = 'block';
+				conteudo.innerHTML = `
+					<div style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); border-radius: 12px; padding: 24px; color: #fca5a5;">
+						<h3 style="margin-top: 0; color: #ef4444;">✗ Erro de conexão</h3>
+						<p>${error.message}</p>
+					</div>
+				`;
+			} finally {
+				btn.disabled = false;
+				btn.textContent = 'Importar Novamente';
+			}
+		});
+	</script>
+</body>
+</html>
