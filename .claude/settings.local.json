@@ -6,7 +6,13 @@
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
       "Bash(npx http-server:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ssh root@31.97.169.36 \"sleep 2 && curl -s http://localhost:3002/ | head -c 500\")",
+      "Bash(ssh root@31.97.169.36 \"systemctl stop nginx\")",
+      "Bash(ssh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

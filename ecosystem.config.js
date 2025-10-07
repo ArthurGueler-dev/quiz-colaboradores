@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'quiz-colaboradores',
-    script: './server.js',
+    script: './backend-mysql.js',
     instances: 1,
     autorestart: true,
     watch: false,
