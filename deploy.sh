@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de deploy para quiz.in9automacao.com.br
+# Script de deploy para fotosquiz.in9automacao.com.br
 # Executa na VPS: ssh root@31.97.169.36
 
 set -e  # Parar execução em caso de erro
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🚀 Iniciando deploy do Quiz de Colaboradores...${NC}"
 
 # Variáveis
-DOMAIN="quiz.in9automacao.com.br"
+DOMAIN="fotosquiz.in9automacao.com.br"
 APP_DIR="/var/www/quiz-colaboradores"
 REPO_URL="https://github.com/ArthurGueler-dev/quiz-colaboradores"
 PORT=3001
@@ -55,7 +55,7 @@ cat > /etc/nginx/sites-available/$DOMAIN << 'EOF'
 server {
     listen 80;
     listen [::]:80;
-    server_name quiz.in9automacao.com.br;
+    server_name fotosquiz.in9automacao.com.br;
 
     location / {
         proxy_pass http://localhost:3001;
