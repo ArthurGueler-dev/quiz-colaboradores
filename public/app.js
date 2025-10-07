@@ -141,7 +141,7 @@ function renderQuestion(){
 		const btn = document.createElement('button');
 		btn.className = 'opcao';
 		btn.innerHTML = `
-			<img src="${opt.foto_adulto}" alt="${opt.nome}" onerror="this.src='https://placehold.co/600x400?text=Foto'">
+			<img src="${opt.foto_adulto}" alt="Foto de colaborador" onerror="this.src='https://placehold.co/600x400?text=Foto'" draggable="false" oncontextmenu="return false;">
 			<div class="nome">${opt.nome}</div>
 		`;
 		btn.addEventListener('click', async ()=>{

@@ -432,6 +432,9 @@ input#codigo::placeholder{
 	object-fit: contain;
 	border-radius: 16px;
 	box-shadow: var(--shadow-soft);
+	user-select: none;
+	-webkit-user-drag: none;
+	pointer-events: auto;
 }
 
 #tela-quiz .grid-opcoes {
@@ -486,6 +489,9 @@ input#codigo::placeholder{
 	border-radius: 12px;
 	box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 	transition: transform 0.3s ease;
+	user-select: none;
+	-webkit-user-drag: none;
+	pointer-events: none;
 }
 
 #tela-quiz .opcao:hover img {
@@ -657,8 +663,9 @@ input#codigo::placeholder{
 		gap: 16px;
 	}
 	#tela-quiz .opcao img {
-		width: 140px;
-		height: 140px;
+		width: 100%;
+		height: 200px;
+		object-fit: cover;
 	}
 }
 
@@ -668,14 +675,15 @@ input#codigo::placeholder{
 	}
 	#tela-quiz .grid-opcoes {
 		grid-template-columns: 1fr;
-		gap: 12px;
+		gap: 16px;
 	}
 	#tela-quiz .foto-crianca {
-		height: 240px;
+		height: 320px;
 	}
 	#tela-quiz .opcao img {
-		width: 120px;
-		height: 120px;
+		width: 100%;
+		height: 240px;
+		object-fit: cover;
 	}
 	.instrucoes-wrap{
 		grid-template-columns:1fr;

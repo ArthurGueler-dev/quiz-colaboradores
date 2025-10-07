@@ -28,16 +28,16 @@ app.use(express.urlencoded({ extended: true }));
 // Simple in-memory session store: token -> participante_id
 const tokenToParticipant = new Map();
 
-// Disable cache for all requests
-app.use((req, res, next) => {
-	res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-	res.set('Pragma', 'no-cache');
-	res.set('Expires', '0');
-	next();
-});
-
-// Static frontend
-app.use(express.static(path.join(__dirname, 'public')));
+// Static frontend with optimized caching
+app.use(express.static(path.join(__dirname, 'public'), {
+	maxAge: '1h', // Cache static files for 1 hour
+	setHeaders: (res, path) => {
+		// Don't cache JS/CSS to ensure updates are seen
+		if (path.endsWith('.js') || path.endsWith('.css')) {
+			res.set('Cache-Control', 'no-cache');
+		}
+	}
+}));
 
 // Helpers
 function getAllCollaborators() {
