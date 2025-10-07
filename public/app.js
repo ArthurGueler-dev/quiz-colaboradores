@@ -27,7 +27,7 @@ function shuffled(arr){
 	return [...arr].map(v => ({ v, r: Math.random() })).sort((a,b)=>a.r-b.r).map(x=>x.v);
 }
 
-function buildMockQuestions(total = 10){
+function buildMockQuestions(total = 15){
 	const targets = shuffled(MOCK_PEOPLE).slice(0, Math.min(total, MOCK_PEOPLE.length));
 	return targets.map(t => {
 		const decoys = shuffled(MOCK_PEOPLE.filter(p => p.id !== t.id)).slice(0,2);
@@ -86,7 +86,7 @@ async function api(path, method='GET', body){
 			};
 		}
 		if (path.includes('quiz')) {
-			return { questions: buildMockQuestions(10) };
+			return { questions: buildMockQuestions(15) };
 		}
 		if (path.includes('responder')) {
 			const acertou = body && body.pergunta_id === body.colaborador_escolhido_id;
