@@ -719,7 +719,7 @@ input#codigo::placeholder{
 		height: 360px;
 		max-height: 50vh;
 		width: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		border-radius: 20px;
 	}
 

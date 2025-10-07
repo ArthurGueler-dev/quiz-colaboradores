@@ -109,10 +109,12 @@ async function api(path, method='GET', body){
 				method,
 				headers: {
 					'Content-Type': 'application/json',
+					'Cache-Control': 'no-cache',
 					...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
 				},
 				body: body ? JSON.stringify(body) : undefined,
-				signal: controller.signal
+				signal: controller.signal,
+				cache: 'no-store'
 			}).finally(() => clearTimeout(timeout));
 
 			const text = await res.text();
