@@ -98,14 +98,19 @@ async function api(path, method='GET', body){
 		throw new Error('Mock endpoint não encontrado');
 	}
 
+	// Timeout de 10 segundos
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 10000);
+
 	const res = await fetch(`${API_BASE}${path}`, {
 		method,
 		headers: {
 			'Content-Type': 'application/json',
 			...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
 		},
-		body: body ? JSON.stringify(body) : undefined
-	});
+		body: body ? JSON.stringify(body) : undefined,
+		signal: controller.signal
+	}).finally(() => clearTimeout(timeout));
 
 	const text = await res.text();
 	console.log('[API] URL:', `${API_BASE}${path}`);
@@ -130,22 +135,39 @@ async function api(path, method='GET', body){
 	return data;
 }
 
+function preloadImages(urls) {
+	urls.forEach(url => {
+		const img = new Image();
+		img.src = url;
+	});
+}
+
 function renderQuestion(){
 	const q = state.questions[state.currentIndex];
 	$('#contador').textContent = `${state.currentIndex+1}/${state.total}`;
 	$('#foto-crianca').src = q.foto_crianca;
 	$('#foto-crianca').alt = `Quem é esta criança?`;
+
+	// Preload das próximas imagens
+	if (state.currentIndex + 1 < state.total) {
+		const nextQ = state.questions[state.currentIndex + 1];
+		preloadImages([nextQ.foto_crianca, ...nextQ.opcoes.map(o => o.foto_adulto)]);
+	}
+
 	const opcoes = $('#opcoes');
 	opcoes.innerHTML='';
 	q.opcoes.forEach(opt=>{
 		const btn = document.createElement('button');
 		btn.className = 'opcao';
 		btn.innerHTML = `
-			<img src="${opt.foto_adulto}" alt="Foto de colaborador" onerror="this.src='https://placehold.co/600x400?text=Foto'" draggable="false" oncontextmenu="return false;">
+			<img src="${opt.foto_adulto}" alt="Foto de colaborador" loading="eager" onerror="this.src='https://placehold.co/600x400?text=Foto'" draggable="false" oncontextmenu="return false;">
 			<div class="nome">${opt.nome}</div>
 		`;
 		btn.addEventListener('click', async ()=>{
-			btn.disabled = true;
+			// Desabilita todos os botões e mostra loading
+			$$('.opcao').forEach(b => b.disabled = true);
+			btn.classList.add('loading');
+
 			try{
 				const resp = await api('/responder.php','POST',{ pergunta_id: q.pergunta_id, colaborador_escolhido_id: opt.id });
 				if (resp.acertou) state.acertos++;
@@ -170,8 +192,8 @@ function renderQuestion(){
 				}
 			}catch(e){
 				alert(e.message);
-			}finally{
-				btn.disabled = false;
+				$$('.opcao').forEach(b => b.disabled = false);
+				btn.classList.remove('loading');
 			}
 		});
 		opcoes.appendChild(btn);
