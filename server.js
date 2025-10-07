@@ -28,6 +28,14 @@ app.use(express.urlencoded({ extended: true }));
 // Simple in-memory session store: token -> participante_id
 const tokenToParticipant = new Map();
 
+// Disable cache for all requests
+app.use((req, res, next) => {
+	res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+	res.set('Pragma', 'no-cache');
+	res.set('Expires', '0');
+	next();
+});
+
 // Static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
