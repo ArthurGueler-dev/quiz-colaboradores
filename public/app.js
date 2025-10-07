@@ -98,41 +98,76 @@ async function api(path, method='GET', body){
 		throw new Error('Mock endpoint não encontrado');
 	}
 
-	// Timeout de 10 segundos
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 10000);
+	// Retry automático até 3 tentativas
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		try {
+			// Timeout de 15 segundos
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 15000);
 
-	const res = await fetch(`${API_BASE}${path}`, {
-		method,
-		headers: {
-			'Content-Type': 'application/json',
-			...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
-		},
-		body: body ? JSON.stringify(body) : undefined,
-		signal: controller.signal
-	}).finally(() => clearTimeout(timeout));
+			const res = await fetch(`${API_BASE}${path}`, {
+				method,
+				headers: {
+					'Content-Type': 'application/json',
+					...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
+				},
+				body: body ? JSON.stringify(body) : undefined,
+				signal: controller.signal
+			}).finally(() => clearTimeout(timeout));
 
-	const text = await res.text();
-	console.log('[API] URL:', `${API_BASE}${path}`);
-	console.log('[API] Status:', res.status);
-	console.log('[API] Response:', text.substring(0, 200));
+			const text = await res.text();
 
-	let data;
-	try {
-		data = JSON.parse(text);
-	} catch(e) {
-		console.error('[API] Parse error:', e);
-		console.error('[API] Full response:', text);
-		throw new Error('Erro de comunicação com o servidor');
+			// Se resposta vazia, tenta novamente
+			if (!text || text.trim().length === 0) {
+				console.warn(`[API] Resposta vazia (tentativa ${attempt}/3)`);
+				if (attempt < 3) {
+					await new Promise(r => setTimeout(r, 1000 * attempt));
+					continue;
+				}
+				throw new Error('Servidor retornou resposta vazia');
+			}
+
+			console.log('[API] URL:', `${API_BASE}${path}`);
+			console.log('[API] Status:', res.status);
+			console.log('[API] Response length:', text.length);
+
+			let data;
+			try {
+				data = JSON.parse(text);
+			} catch(e) {
+				console.error(`[API] Parse error (tentativa ${attempt}/3):`, e);
+				console.error('[API] Response preview:', text.substring(0, 300));
+
+				// Se não é a última tentativa, tenta novamente
+				if (attempt < 3) {
+					await new Promise(r => setTimeout(r, 1000 * attempt));
+					continue;
+				}
+				throw new Error('Erro ao processar resposta do servidor');
+			}
+
+			// Verifica se há erro explícito
+			if (data.error) {
+				throw new Error(data.error);
+			}
+
+			// Sucesso!
+			return data;
+
+		} catch(e) {
+			// Se é timeout ou rede, tenta novamente
+			if (e.name === 'AbortError' && attempt < 3) {
+				console.warn(`[API] Timeout (tentativa ${attempt}/3)`);
+				await new Promise(r => setTimeout(r, 1000 * attempt));
+				continue;
+			}
+
+			// Se é a última tentativa, lança erro
+			if (attempt === 3 || e.message.includes('retornou')) {
+				throw e;
+			}
+		}
 	}
-
-	// Verifica se há erro explícito
-	if (data.error) {
-		throw new Error(data.error);
-	}
-
-	// Se não tem success nem ok, mas também não tem erro, tudo bem
-	return data;
 }
 
 function preloadImages(urls) {
@@ -202,15 +237,23 @@ function renderQuestion(){
 
 async function startQuiz(){
 	try{
+		console.log('[QUIZ] Carregando perguntas...');
 		const data = await api('/quiz.php','GET');
 		state.questions = data.questions || [];
+
+		if (state.questions.length === 0) {
+			throw new Error('Nenhuma pergunta disponível');
+		}
+
 		state.currentIndex = 0;
 		state.acertos = 0;
 		state.total = state.questions.length;
+		console.log('[QUIZ] Carregado com sucesso:', state.total, 'perguntas');
 		show('#tela-quiz');
 		renderQuestion();
 	}catch(e){
-		$('#login-msg').textContent = e.message;
+		console.error('[QUIZ] Erro ao carregar:', e);
+		alert('Erro ao carregar o quiz: ' + e.message + '\n\nTente novamente.');
 	}
 }
 
@@ -285,8 +328,16 @@ window.addEventListener('DOMContentLoaded', ()=>{
 		}
 	});
 
-	$('#btn-comecar')?.addEventListener('click', ()=>{
-		startQuiz();
+	$('#btn-comecar')?.addEventListener('click', async ()=>{
+		const btn = $('#btn-comecar');
+		btn.disabled = true;
+		btn.textContent = 'Carregando...';
+		try {
+			await startQuiz();
+		} finally {
+			btn.disabled = false;
+			btn.textContent = 'Começar';
+		}
 	});
 
 	$('#btn-reiniciar').addEventListener('click', ()=>{
