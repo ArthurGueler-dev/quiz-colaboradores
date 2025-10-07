@@ -17,7 +17,7 @@ echo -e "${BLUE}🚀 Iniciando deploy do Quiz de Colaboradores...${NC}"
 DOMAIN="fotosquiz.in9automacao.com.br"
 APP_DIR="/var/www/quiz-colaboradores"
 REPO_URL="https://github.com/ArthurGueler-dev/quiz-colaboradores"
-PORT=3001
+PORT=3002
 
 # 1. Remover aplicação anterior do domínio
 echo -e "${BLUE}📦 Removendo aplicação anterior...${NC}"
@@ -58,7 +58,7 @@ server {
     server_name fotosquiz.in9automacao.com.br;
 
     location / {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
