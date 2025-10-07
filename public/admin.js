@@ -1,5 +1,5 @@
-// API relativa - usa o próprio backend Node.js
-const API_BASE = '';
+// API PHP externa - usa as APIs em floripa.in9automacao.com.br
+const API_BASE = 'https://floripa.in9automacao.com.br';
 
 function api(path){
 	return `${API_BASE}${path}`;
