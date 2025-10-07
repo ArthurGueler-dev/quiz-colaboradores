@@ -1,8 +1,8 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// API local - usa o backend Node.js com MySQL
-const API_BASE = '';
+// API PHP externa - usa as APIs em floripa.in9automacao.com.br
+const API_BASE = 'https://floripa.in9automacao.com.br';
 // Força modo simulado para funcionar sem backend (servidor estático)
 // Altere para false para usar a API real APÓS fazer upload das APIs
 const USE_MOCKS = false; // false = usa APIs reais no servidor
@@ -213,7 +213,7 @@ function renderQuestion(){
 			btn.classList.add('loading');
 
 			try{
-				const resp = await api('/api/responder.php','POST',{ pergunta_id: q.pergunta_id, colaborador_escolhido_id: opt.id });
+				const resp = await api('/responder.php','POST',{ pergunta_id: q.pergunta_id, colaborador_escolhido_id: opt.id });
 				if (resp.acertou) state.acertos++;
 				state.currentIndex++;
 				if (state.currentIndex < state.total) {
@@ -221,7 +221,7 @@ function renderQuestion(){
 				} else {
 					// Salva o resultado no banco
 					try {
-						await api('/api/salvar_resultado.php','POST',{
+						await api('/salvar_resultado.php','POST',{
 							colaborador_id: state.participante?.id || 0,
 							email: state.participante?.email || '',
 							acertos: state.acertos,
@@ -247,7 +247,7 @@ function renderQuestion(){
 async function startQuiz(){
 	try{
 		console.log('[QUIZ] Carregando perguntas...');
-		const data = await api('/api/quiz.php','GET');
+		const data = await api('/quiz.php','GET');
 		state.questions = data.questions || [];
 
 		if (state.questions.length === 0) {
@@ -310,7 +310,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 		try{
 			await requestFullscreen();
-			const data = await api('/api/colaborador_login.php','POST',{ email, senha });
+			const data = await api('/colaborador_login.php','POST',{ email, senha });
 
 			if (data.ja_jogou) {
 				// Usuário já participou
