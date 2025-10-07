@@ -105,16 +105,14 @@ async function api(path, method='GET', body){
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 15000);
 
-			const res = await fetch(`${API_BASE}${path}`, {
+			const res = await fetch(`${API_BASE}${path}?_=${Date.now()}`, {
 				method,
 				headers: {
 					'Content-Type': 'application/json',
-					'Cache-Control': 'no-cache',
 					...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
 				},
 				body: body ? JSON.stringify(body) : undefined,
-				signal: controller.signal,
-				cache: 'no-store'
+				signal: controller.signal
 			}).finally(() => clearTimeout(timeout));
 
 			const text = await res.text();
