@@ -119,12 +119,13 @@ async function api(path, method='GET', body){
 
 			// Se resposta vazia, tenta novamente
 			if (!text || text.trim().length === 0) {
-				console.warn(`[API] Resposta vazia (tentativa ${attempt}/3)`);
+				console.warn(`[API] Resposta vazia (tentativa ${attempt}/3) - URL: ${API_BASE}${path}`);
 				if (attempt < 3) {
-					await new Promise(r => setTimeout(r, 1000 * attempt));
+					// Delay maior: 2s, 4s
+					await new Promise(r => setTimeout(r, 2000 * attempt));
 					continue;
 				}
-				throw new Error('Servidor retornou resposta vazia');
+				throw new Error('Servidor não respondeu. Tente novamente.');
 			}
 
 			console.log('[API] URL:', `${API_BASE}${path}`);
@@ -140,10 +141,10 @@ async function api(path, method='GET', body){
 
 				// Se não é a última tentativa, tenta novamente
 				if (attempt < 3) {
-					await new Promise(r => setTimeout(r, 1000 * attempt));
+					await new Promise(r => setTimeout(r, 2000 * attempt));
 					continue;
 				}
-				throw new Error('Erro ao processar resposta do servidor');
+				throw new Error('Resposta inválida do servidor. Tente novamente.');
 			}
 
 			// Verifica se há erro explícito
@@ -158,16 +159,24 @@ async function api(path, method='GET', body){
 			// Se é timeout ou rede, tenta novamente
 			if (e.name === 'AbortError' && attempt < 3) {
 				console.warn(`[API] Timeout (tentativa ${attempt}/3)`);
-				await new Promise(r => setTimeout(r, 1000 * attempt));
+				await new Promise(r => setTimeout(r, 2000 * attempt));
+				continue;
+			}
+
+			// Se é erro de rede e não é última tentativa
+			if ((e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) && attempt < 3) {
+				console.warn(`[API] Erro de rede (tentativa ${attempt}/3)`);
+				await new Promise(r => setTimeout(r, 2000 * attempt));
 				continue;
 			}
 
 			// Se é a última tentativa, lança erro
-			if (attempt === 3 || e.message.includes('retornou')) {
+			if (attempt === 3) {
 				throw e;
 			}
 		}
 	}
+	throw new Error('Falha na comunicação com o servidor após 3 tentativas');
 }
 
 function preloadImages(urls) {
@@ -253,7 +262,8 @@ async function startQuiz(){
 		renderQuestion();
 	}catch(e){
 		console.error('[QUIZ] Erro ao carregar:', e);
-		alert('Erro ao carregar o quiz: ' + e.message + '\n\nTente novamente.');
+		alert('⚠️ ' + e.message + '\n\nClique em "Começar" novamente.');
+		throw e; // Propaga erro para não resetar botão
 	}
 }
 
