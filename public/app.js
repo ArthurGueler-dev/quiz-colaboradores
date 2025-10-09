@@ -247,6 +247,8 @@ function renderQuestion(){
 async function startQuiz(){
 	try{
 		console.log('[QUIZ] Carregando perguntas...');
+		console.log('[QUIZ] Token disponível:', state.token ? 'Sim' : 'Não');
+		console.log('[QUIZ] Token:', state.token);
 		const data = await api('/quiz.php','GET');
 		state.questions = data.questions || [];
 
@@ -295,10 +297,21 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 	$('#btn-fullscreen').addEventListener('click', requestFullscreen);
 
-	// Sempre limpa sessão anterior ao carregar a página
-	localStorage.removeItem('token');
-	localStorage.removeItem('participante');
-	resetAll();
+	// Tenta restaurar sessão do localStorage
+	const savedToken = localStorage.getItem('token');
+	const savedParticipante = localStorage.getItem('participante');
+
+	if (savedToken && savedParticipante) {
+		try {
+			state.token = savedToken;
+			state.participante = JSON.parse(savedParticipante);
+			console.log('[SESSÃO] Token restaurado:', state.token ? 'Sim' : 'Não');
+		} catch(e) {
+			console.error('[SESSÃO] Erro ao restaurar:', e);
+			localStorage.removeItem('token');
+			localStorage.removeItem('participante');
+		}
+	}
 
 	$('#form-login').addEventListener('submit', async (e)=>{
 		e.preventDefault();
@@ -323,9 +336,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
 			if (data.success && data.participante) {
 				state.token = data.token;
 				state.participante = data.participante;
+				console.log('[LOGIN] Token recebido:', state.token ? 'Sim' : 'Não');
+				console.log('[LOGIN] Token salvo em state.token');
 				if (!USE_MOCKS) {
 					localStorage.setItem('token', state.token);
 					localStorage.setItem('participante', JSON.stringify(data.participante));
+					console.log('[LOGIN] Token salvo no localStorage');
 				}
 				$('#login-msg').textContent = '';
 				show('#tela-instrucoes');
