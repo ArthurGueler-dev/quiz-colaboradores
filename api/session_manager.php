@@ -145,13 +145,45 @@ function markSessionAsUsed($conn, $token) {
 
 // Obtém token do cabeçalho Authorization
 function getTokenFromHeader() {
+    // Função compatível com cPanel e Apache CGI/FastCGI
+    if (!function_exists('getallheaders')) {
+        function getallheaders() {
+            $headers = array();
+            foreach ($_SERVER as $name => $value) {
+                if (substr($name, 0, 5) == 'HTTP_') {
+                    $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+                }
+            }
+            return $headers;
+        }
+    }
+
     $headers = getallheaders();
+
+    // Tenta Authorization header
     if (isset($headers['Authorization'])) {
         $auth = $headers['Authorization'];
         if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
             return $matches[1];
         }
     }
+
+    // Tenta variáveis alternativas do servidor
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['HTTP_AUTHORIZATION'];
+        if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
+            return $matches[1];
+        }
+    }
+
+    // Tenta redirect do Apache
+    if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
+            return $matches[1];
+        }
+    }
+
     return null;
 }
 
