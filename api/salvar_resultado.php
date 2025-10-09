@@ -68,7 +68,7 @@ try {
 	$email = $session['email'];
 
 	// VALIDAÇÃO ADICIONAL: Verifica se o colaborador da sessão existe e está ativo
-	$stmtUser = $conn->prepare("SELECT id, email, ativo FROM quiz_colaboradores WHERE id = ?");
+	$stmtUser = $conn->prepare("SELECT id, nome, cpf, email, ativo FROM quiz_colaboradores WHERE id = ?");
 	$stmtUser->bind_param('i', $colaborador_id);
 	$stmtUser->execute();
 	$resultUser = $stmtUser->get_result();
@@ -129,9 +129,21 @@ try {
 		$conn->query("ALTER TABLE quiz_participacoes ADD INDEX idx_ranking (acertos DESC, tempo_total_segundos ASC)");
 	}
 
-	// Insere o resultado
-	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, email, acertos, total, tempo_total_segundos) VALUES (?, ?, ?, ?, ?)");
-	$stmtInsert->bind_param('isiii', $colaborador_id, $colaboradorData['email'], $acertos, $total, $tempo_total_segundos);
+	// Verifica e adiciona colunas nome e cpf se não existirem
+	$checkNome = $conn->query("SHOW COLUMNS FROM quiz_participacoes LIKE 'nome'");
+	if ($checkNome->num_rows === 0) {
+		$conn->query("ALTER TABLE quiz_participacoes ADD COLUMN nome VARCHAR(200) DEFAULT NULL AFTER colaborador_id");
+	}
+
+	$checkCpf = $conn->query("SHOW COLUMNS FROM quiz_participacoes LIKE 'cpf'");
+	if ($checkCpf->num_rows === 0) {
+		$conn->query("ALTER TABLE quiz_participacoes ADD COLUMN cpf VARCHAR(14) DEFAULT NULL AFTER nome");
+		$conn->query("ALTER TABLE quiz_participacoes ADD INDEX idx_cpf (cpf)");
+	}
+
+	// Insere o resultado com nome e CPF
+	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, nome, cpf, email, acertos, total, tempo_total_segundos) VALUES (?, ?, ?, ?, ?, ?, ?)");
+	$stmtInsert->bind_param('isssiil', $colaborador_id, $colaboradorData['nome'], $colaboradorData['cpf'], $colaboradorData['email'], $acertos, $total, $tempo_total_segundos);
 
 	if (!$stmtInsert->execute()) {
 		echo json_encode(array('success' => false, 'error' => 'Erro ao salvar resultado'));
