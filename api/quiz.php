@@ -75,7 +75,7 @@ while ($row = $result->fetch_assoc()) {
     }
 }
 
-$conn->close();
+// NÃO feche a conexão aqui! Ainda precisamos usar para salvar dados da sessão
 
 shuffle($mulheresColabs);
 shuffle($homensColabs);
@@ -140,6 +140,7 @@ shuffle($questions);
 // Salva as respostas corretas na sessão (SEGURO - apenas no backend)
 saveQuizDataToSession($conn, $token, array('respostas_corretas' => $respostas_corretas));
 
+// AGORA sim, fecha a conexão (depois de salvar os dados)
 $conn->close();
 
 // Envia apenas as perguntas ao frontend (SEM as respostas corretas)

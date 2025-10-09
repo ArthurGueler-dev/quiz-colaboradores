@@ -108,8 +108,20 @@ function validateToken($conn, $token) {
 
 // Salva dados do quiz na sessão
 function saveQuizDataToSession($conn, $token, $quizData) {
+    // Valida conexão
+    if (!$conn || !($conn instanceof mysqli) || $conn->connect_errno) {
+        error_log("saveQuizDataToSession: Conexão inválida");
+        return false;
+    }
+
     $quizDataJson = json_encode($quizData);
     $stmt = $conn->prepare("UPDATE quiz_sessions SET quiz_data = ? WHERE token = ?");
+
+    if (!$stmt) {
+        error_log("saveQuizDataToSession: Erro no prepare - " . $conn->error);
+        return false;
+    }
+
     $stmt->bind_param('ss', $quizDataJson, $token);
     $result = $stmt->execute();
     $stmt->close();
@@ -118,7 +130,19 @@ function saveQuizDataToSession($conn, $token, $quizData) {
 
 // Obtém dados do quiz da sessão
 function getQuizDataFromSession($conn, $token) {
+    // Valida conexão
+    if (!$conn || !($conn instanceof mysqli) || $conn->connect_errno) {
+        error_log("getQuizDataFromSession: Conexão inválida");
+        return null;
+    }
+
     $stmt = $conn->prepare("SELECT quiz_data FROM quiz_sessions WHERE token = ? AND expires_at > NOW()");
+
+    if (!$stmt) {
+        error_log("getQuizDataFromSession: Erro no prepare - " . $conn->error);
+        return null;
+    }
+
     $stmt->bind_param('s', $token);
     $stmt->execute();
     $result = $stmt->get_result();
