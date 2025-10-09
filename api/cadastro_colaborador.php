@@ -92,7 +92,8 @@ try {
 		$email = 'user' . $cpf . '@quiz.temp';
 
 		// Gera uma senha aleatória (não será usada, mas é obrigatória no banco)
-		$senhaAuto = bin2hex(random_bytes(16));
+		// Usa openssl_random_pseudo_bytes para compatibilidade com PHP 5.x
+		$senhaAuto = bin2hex(openssl_random_pseudo_bytes(16));
 		$senhaHash = password_hash($senhaAuto, PASSWORD_BCRYPT);
 
 		// Verifica se o CPF já existe
