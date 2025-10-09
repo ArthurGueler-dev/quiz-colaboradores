@@ -58,25 +58,20 @@ try {
 	$method = $_SERVER['REQUEST_METHOD'];
 
 	if ($method === 'POST') {
+		require_once __DIR__ . '/session_manager.php';
+
 		$raw = file_get_contents('php://input');
 		$decoded = json_decode($raw, true);
 		$body = is_array($decoded) ? $decoded : array();
 
 		$nome = isset($body['nome']) ? trim($body['nome']) : '';
-		$email = isset($body['email']) ? trim($body['email']) : '';
 		$cpf = isset($body['cpf']) ? trim($body['cpf']) : '';
-		$senha = isset($body['senha']) ? trim($body['senha']) : '';
 		$foto_adulto = isset($body['foto_adulto']) ? trim($body['foto_adulto']) : '';
 		$foto_crianca = isset($body['foto_crianca']) ? trim($body['foto_crianca']) : '';
 
 		// Validações
 		if ($nome === '') {
 			echo json_encode(array('success' => false, 'error' => 'Nome é obrigatório'));
-			exit();
-		}
-
-		if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-			echo json_encode(array('success' => false, 'error' => 'E-mail válido é obrigatório'));
 			exit();
 		}
 
@@ -93,39 +88,62 @@ try {
 			exit();
 		}
 
-		if ($senha === '' || strlen($senha) < 6) {
-			echo json_encode(array('success' => false, 'error' => 'Senha deve ter no mínimo 6 caracteres'));
-			exit();
-		}
+		// Gera um email temporário baseado no CPF
+		$email = 'user' . $cpf . '@quiz.temp';
 
-		// Verifica se o e-mail já existe
-		$stmtCheckEmail = $conn->prepare("SELECT id FROM quiz_colaboradores WHERE email = ?");
-		$stmtCheckEmail->bind_param('s', $email);
-		$stmtCheckEmail->execute();
-		$resultCheckEmail = $stmtCheckEmail->get_result();
-
-		if ($resultCheckEmail->num_rows > 0) {
-			echo json_encode(array('success' => false, 'error' => 'Este e-mail já está cadastrado'));
-			$stmtCheckEmail->close();
-			exit();
-		}
-		$stmtCheckEmail->close();
+		// Gera uma senha aleatória (não será usada, mas é obrigatória no banco)
+		$senhaAuto = bin2hex(random_bytes(16));
+		$senhaHash = password_hash($senhaAuto, PASSWORD_BCRYPT);
 
 		// Verifica se o CPF já existe
-		$stmtCheckCPF = $conn->prepare("SELECT id FROM quiz_colaboradores WHERE cpf = ?");
+		$stmtCheckCPF = $conn->prepare("SELECT id, nome FROM quiz_colaboradores WHERE cpf = ?");
 		$stmtCheckCPF->bind_param('s', $cpf);
 		$stmtCheckCPF->execute();
 		$resultCheckCPF = $stmtCheckCPF->get_result();
 
 		if ($resultCheckCPF->num_rows > 0) {
-			echo json_encode(array('success' => false, 'error' => 'Este CPF já está cadastrado'));
+			// CPF já cadastrado - faz login direto
+			$colaborador = $resultCheckCPF->fetch_assoc();
+			$colaborador_id = (int)$colaborador['id'];
 			$stmtCheckCPF->close();
+
+			// Verifica se já jogou
+			$stmtCheck = $conn->prepare("SELECT acertos, total, data_participacao FROM quiz_participacoes WHERE colaborador_id = ?");
+			$stmtCheck->bind_param('i', $colaborador_id);
+			$stmtCheck->execute();
+			$resultCheck = $stmtCheck->get_result();
+
+			if ($resultCheck->num_rows > 0) {
+				$resultado = $resultCheck->fetch_assoc();
+				$stmtCheck->close();
+				echo json_encode(array(
+					'success' => false,
+					'ja_jogou' => true,
+					'resultado' => array(
+						'acertos' => (int)$resultado['acertos'],
+						'total' => (int)$resultado['total'],
+						'data' => $resultado['data_participacao']
+					)
+				));
+				exit();
+			}
+			$stmtCheck->close();
+
+			// Cria sessão
+			$token = createSession($conn, $colaborador_id, $email);
+
+			echo json_encode(array(
+				'success' => true,
+				'token' => $token,
+				'participante' => array(
+					'id' => $colaborador_id,
+					'nome' => $colaborador['nome'],
+					'cpf' => $cpf
+				)
+			));
 			exit();
 		}
 		$stmtCheckCPF->close();
-
-		// Hash da senha (bcrypt)
-		$senhaHash = password_hash($senha, PASSWORD_BCRYPT);
 
 		// Insere o novo colaborador
 		$stmt = $conn->prepare("INSERT INTO quiz_colaboradores (nome, email, cpf, senha, foto_adulto, foto_crianca) VALUES (?, ?, ?, ?, ?, ?)");
@@ -140,13 +158,17 @@ try {
 		$colaborador_id = $conn->insert_id;
 		$stmt->close();
 
+		// Cria sessão automática após cadastro
+		$token = createSession($conn, $colaborador_id, $email);
+
 		echo json_encode(array(
 			'success' => true,
-			'message' => 'Colaborador cadastrado com sucesso',
-			'colaborador' => array(
+			'token' => $token,
+			'message' => 'Cadastro realizado com sucesso',
+			'participante' => array(
 				'id' => $colaborador_id,
 				'nome' => $nome,
-				'email' => $email
+				'cpf' => $cpf
 			)
 		));
 

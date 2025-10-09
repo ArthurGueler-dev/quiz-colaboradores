@@ -61,6 +61,7 @@ try {
 
 	$acertos = isset($body['acertos']) ? (int)$body['acertos'] : 0;
 	$total = isset($body['total']) ? (int)$body['total'] : 0;
+	$tempo_total_segundos = isset($body['tempo_total_segundos']) ? (int)$body['tempo_total_segundos'] : 0;
 
 	// USA OS DADOS DA SESSÃO (não confia no que vem do frontend)
 	$colaborador_id = (int)$session['colaborador_id'];
@@ -96,8 +97,10 @@ try {
 			email VARCHAR(200) NOT NULL,
 			acertos INT NOT NULL DEFAULT 0,
 			total INT NOT NULL DEFAULT 0,
+			tempo_total_segundos INT NOT NULL DEFAULT 0,
 			data_participacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE KEY unique_colaborador (colaborador_id)
+			UNIQUE KEY unique_colaborador (colaborador_id),
+			INDEX idx_ranking (acertos DESC, tempo_total_segundos ASC)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 		if (!$conn->query($createTable)) {
@@ -119,9 +122,16 @@ try {
 	}
 	$stmtCheck->close();
 
+	// Verifica se a coluna tempo_total_segundos existe, se não, adiciona
+	$checkColumn = $conn->query("SHOW COLUMNS FROM quiz_participacoes LIKE 'tempo_total_segundos'");
+	if ($checkColumn->num_rows === 0) {
+		$conn->query("ALTER TABLE quiz_participacoes ADD COLUMN tempo_total_segundos INT NOT NULL DEFAULT 0 AFTER total");
+		$conn->query("ALTER TABLE quiz_participacoes ADD INDEX idx_ranking (acertos DESC, tempo_total_segundos ASC)");
+	}
+
 	// Insere o resultado
-	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, email, acertos, total) VALUES (?, ?, ?, ?)");
-	$stmtInsert->bind_param('isii', $colaborador_id, $colaboradorData['email'], $acertos, $total);
+	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, email, acertos, total, tempo_total_segundos) VALUES (?, ?, ?, ?, ?)");
+	$stmtInsert->bind_param('isiii', $colaborador_id, $colaboradorData['email'], $acertos, $total, $tempo_total_segundos);
 
 	if (!$stmtInsert->execute()) {
 		echo json_encode(array('success' => false, 'error' => 'Erro ao salvar resultado'));
@@ -143,7 +153,8 @@ try {
 			'colaborador_id' => $colaborador_id,
 			'email' => $colaboradorData['email'],
 			'acertos' => $acertos,
-			'total' => $total
+			'total' => $total,
+			'tempo_total_segundos' => $tempo_total_segundos
 		)
 	));
 

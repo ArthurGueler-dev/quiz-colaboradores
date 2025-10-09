@@ -42,7 +42,11 @@ const state = {
 	questions: [],
 	currentIndex: 0,
 	acertos: 0,
-	total: 0
+	total: 0,
+	tempoTotal: 0,           // Tempo total acumulado em segundos
+	tempoInicio: null,       // Timestamp de início da pergunta atual
+	timerInterval: null,     // Referência do intervalo do timer
+	tempoRestante: 20        // Tempo restante para a pergunta atual (20 segundos)
 };
 
 function show(id){
@@ -187,6 +191,84 @@ function preloadImages(urls) {
 	});
 }
 
+// Funções de gerenciamento do timer
+function startTimer() {
+	// Para qualquer timer anterior
+	stopTimer();
+
+	// Inicia novo timer
+	state.tempoInicio = Date.now();
+	state.tempoRestante = 20;
+
+	// Atualiza display imediatamente
+	updateTimerDisplay();
+
+	// Atualiza a cada segundo
+	state.timerInterval = setInterval(() => {
+		const tempoDecorrido = Math.floor((Date.now() - state.tempoInicio) / 1000);
+		state.tempoRestante = Math.max(0, 20 - tempoDecorrido);
+
+		updateTimerDisplay();
+
+		// Se o tempo acabou, força próxima pergunta (resposta errada)
+		if (state.tempoRestante === 0) {
+			stopTimer();
+			state.currentIndex++;
+
+			if (state.currentIndex < state.total) {
+				renderQuestion();
+			} else {
+				finalizarQuiz();
+			}
+		}
+	}, 1000);
+}
+
+function stopTimer() {
+	if (state.timerInterval) {
+		clearInterval(state.timerInterval);
+		state.timerInterval = null;
+	}
+
+	// Calcula e acumula tempo gasto nesta pergunta
+	if (state.tempoInicio) {
+		const tempoGasto = Math.floor((Date.now() - state.tempoInicio) / 1000);
+		state.tempoTotal += Math.min(tempoGasto, 20); // Máximo 20 segundos por pergunta
+		state.tempoInicio = null;
+	}
+}
+
+function updateTimerDisplay() {
+	const timerEl = $('#timer-display');
+	if (timerEl) {
+		timerEl.textContent = state.tempoRestante;
+
+		// Adiciona classe de alerta quando faltam 5 segundos ou menos
+		if (state.tempoRestante <= 5) {
+			timerEl.classList.add('timer-alert');
+		} else {
+			timerEl.classList.remove('timer-alert');
+		}
+	}
+}
+
+async function finalizarQuiz() {
+	// Salva o resultado no banco (agora com tempo)
+	try {
+		await api('/salvar_resultado.php','POST',{
+			acertos: state.acertos,
+			total: state.total,
+			tempo_total_segundos: state.tempoTotal
+		});
+	} catch(e) {
+		console.error('Erro ao salvar resultado:', e);
+	}
+
+	$('#acertos').textContent = state.acertos;
+	$('#total').textContent = state.total;
+	show('#tela-resultado');
+}
+
 function renderQuestion(){
 	const q = state.questions[state.currentIndex];
 	$('#contador').textContent = `${state.currentIndex+1}/${state.total}`;
@@ -209,6 +291,9 @@ function renderQuestion(){
 			<div class="nome">${opt.nome}</div>
 		`;
 		btn.addEventListener('click', async ()=>{
+			// Para o timer e acumula tempo
+			stopTimer();
+
 			// Desabilita todos os botões e mostra loading
 			$$('.opcao').forEach(b => b.disabled = true);
 			btn.classList.add('loading');
@@ -218,30 +303,25 @@ function renderQuestion(){
 				const resp = await api('/responder.php','POST',{ pergunta_id: q.id, colaborador_escolhido_id: opt.id });
 				if (resp.acertou) state.acertos++;
 				state.currentIndex++;
+
 				if (state.currentIndex < state.total) {
 					renderQuestion();
 				} else {
-					// Salva o resultado no banco (não precisa mais enviar colaborador_id/email)
-					try {
-						await api('/salvar_resultado.php','POST',{
-							acertos: state.acertos,
-							total: state.total
-						});
-					} catch(e) {
-						console.error('Erro ao salvar resultado:', e);
-					}
-					$('#acertos').textContent = state.acertos;
-					$('#total').textContent = state.total;
-					show('#tela-resultado');
+					finalizarQuiz();
 				}
 			}catch(e){
 				alert(e.message);
 				$$('.opcao').forEach(b => b.disabled = false);
 				btn.classList.remove('loading');
+				// Reinicia o timer se houve erro
+				startTimer();
 			}
 		});
 		opcoes.appendChild(btn);
 	});
+
+	// Inicia o timer de 20 segundos para esta pergunta
+	startTimer();
 }
 
 async function startQuiz(){
@@ -259,6 +339,9 @@ async function startQuiz(){
 		state.currentIndex = 0;
 		state.acertos = 0;
 		state.total = state.questions.length;
+		state.tempoTotal = 0;
+		state.tempoInicio = null;
+		state.tempoRestante = 20;
 		console.log('[QUIZ] Carregado com sucesso:', state.total, 'perguntas');
 		show('#tela-quiz');
 		renderQuestion();
@@ -270,87 +353,125 @@ async function startQuiz(){
 }
 
 function resetAll(){
+	// Para o timer se estiver rodando
+	stopTimer();
+
 	state.token = null;
 	state.participante = null;
 	state.questions = [];
 	state.currentIndex = 0;
 	state.acertos = 0;
 	state.total = 0;
+	state.tempoTotal = 0;
+	state.tempoInicio = null;
+	state.tempoRestante = 20;
 	localStorage.removeItem('token');
 	localStorage.removeItem('participante');
-	$('#email').value = '';
-	$('#senha').value = '';
-	$('#login-msg').textContent = '';
-	show('#tela-login');
+	$('#nome').value = '';
+	$('#cpf').value = '';
+	$('#cadastro-msg').textContent = '';
+	show('#tela-cadastro');
+}
+
+// Validação de CPF
+function validaCPF(cpf) {
+	cpf = cpf.replace(/\D/g, '');
+	if (cpf.length !== 11) return false;
+
+	// Verifica se todos os dígitos são iguais
+	if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+	// Valida primeiro dígito verificador
+	let soma = 0;
+	for (let i = 0; i < 9; i++) {
+		soma += parseInt(cpf.charAt(i)) * (10 - i);
+	}
+	let resto = 11 - (soma % 11);
+	let digito1 = resto >= 10 ? 0 : resto;
+
+	if (digito1 !== parseInt(cpf.charAt(9))) return false;
+
+	// Valida segundo dígito verificador
+	soma = 0;
+	for (let i = 0; i < 10; i++) {
+		soma += parseInt(cpf.charAt(i)) * (11 - i);
+	}
+	resto = 11 - (soma % 11);
+	let digito2 = resto >= 10 ? 0 : resto;
+
+	return digito2 === parseInt(cpf.charAt(10));
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
-	// Inicializa mostrando apenas a tela de login
-	show('#tela-login');
-
-	// Preenche email da URL se existir
-	const urlParams = new URLSearchParams(window.location.search);
-	const emailUrl = urlParams.get('email');
-	if (emailUrl) {
-		$('#email').value = emailUrl;
-	}
+	// Inicializa mostrando apenas a tela de cadastro
+	show('#tela-cadastro');
 
 	$('#btn-fullscreen').addEventListener('click', requestFullscreen);
 
-	// Tenta restaurar sessão do localStorage
-	const savedToken = localStorage.getItem('token');
-	const savedParticipante = localStorage.getItem('participante');
-
-	if (savedToken && savedParticipante) {
-		try {
-			state.token = savedToken;
-			state.participante = JSON.parse(savedParticipante);
-			console.log('[SESSÃO] Token restaurado:', state.token ? 'Sim' : 'Não');
-		} catch(e) {
-			console.error('[SESSÃO] Erro ao restaurar:', e);
-			localStorage.removeItem('token');
-			localStorage.removeItem('participante');
+	// Máscara de CPF
+	$('#cpf').addEventListener('input', (e) => {
+		let value = e.target.value.replace(/\D/g, '');
+		if (value.length <= 11) {
+			value = value.replace(/(\d{3})(\d)/, '$1.$2');
+			value = value.replace(/(\d{3})(\d)/, '$1.$2');
+			value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+			e.target.value = value;
 		}
-	}
+	});
 
-	$('#form-login').addEventListener('submit', async (e)=>{
+	// Form de cadastro (SEM senha)
+	$('#form-cadastro').addEventListener('submit', async (e)=>{
 		e.preventDefault();
-		const email = $('#email').value.trim();
-		const senha = $('#senha').value;
+		const nome = $('#nome').value.trim();
+		const cpf = $('#cpf').value.trim();
 
-		if (!email || !senha) return;
-		$('#login-msg').textContent = 'Verificando...';
+		if (!nome || !cpf) {
+			$('#cadastro-msg').textContent = 'Preencha todos os campos';
+			return;
+		}
+
+		// Valida CPF
+		if (!validaCPF(cpf)) {
+			$('#cadastro-msg').textContent = 'CPF inválido';
+			return;
+		}
+
+		$('#cadastro-msg').textContent = 'Cadastrando...';
 
 		try{
 			await requestFullscreen();
-			const data = await api('/colaborador_login.php','POST',{ email, senha });
+
+			// Chama API de cadastro simplificado (sem senha)
+			const data = await api('/cadastro_colaborador.php','POST',{
+				nome,
+				cpf: cpf.replace(/\D/g, '') // Remove formatação
+			});
 
 			if (data.ja_jogou) {
 				// Usuário já participou
 				const r = data.resultado;
-				$('#login-msg').textContent = '';
+				$('#cadastro-msg').textContent = '';
 				alert(`Você já participou do quiz!\n\nSeu resultado:\nAcertos: ${r.acertos}/${r.total}\nData: ${new Date(r.data).toLocaleDateString('pt-BR')}`);
 				return;
 			}
 
-			if (data.success && data.participante) {
+			if (data.success && data.token) {
 				state.token = data.token;
 				state.participante = data.participante;
-				console.log('[LOGIN] Token recebido:', state.token ? 'Sim' : 'Não');
-				console.log('[LOGIN] Token salvo em state.token');
+				console.log('[CADASTRO] Token recebido:', state.token ? 'Sim' : 'Não');
 				if (!USE_MOCKS) {
 					localStorage.setItem('token', state.token);
 					localStorage.setItem('participante', JSON.stringify(data.participante));
-					console.log('[LOGIN] Token salvo no localStorage');
+					console.log('[CADASTRO] Token salvo no localStorage');
 				}
-				$('#login-msg').textContent = '';
+				$('#cadastro-msg').textContent = '';
 				show('#tela-instrucoes');
 			} else {
-				throw new Error('Falha no login');
+				throw new Error(data.error || 'Erro ao cadastrar');
 			}
 		}catch(err){
-			$('#login-msg').textContent = err.message || 'Erro ao fazer login';
-			console.error('Erro no login:', err);
+			$('#cadastro-msg').textContent = err.message || 'Erro ao cadastrar';
+			console.error('Erro no cadastro:', err);
 		}
 	});
 
