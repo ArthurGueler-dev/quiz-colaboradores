@@ -29,10 +29,10 @@ function shuffled(arr){
 
 function buildMockQuestions(total = 15){
 	const targets = shuffled(MOCK_PEOPLE).slice(0, Math.min(total, MOCK_PEOPLE.length));
-	return targets.map(t => {
+	return targets.map((t, idx) => {
 		const decoys = shuffled(MOCK_PEOPLE.filter(p => p.id !== t.id)).slice(0,2);
 		const opcoes = shuffled([t, ...decoys]).map(o => ({ id: o.id, nome: o.nome, foto_adulto: o.foto_adulto }));
-		return { pergunta_id: t.id, foto_crianca: t.foto_crianca, opcoes };
+		return { id: `q_mock_${idx}`, foto_crianca: t.foto_crianca, opcoes };
 	});
 }
 
@@ -89,7 +89,8 @@ async function api(path, method='GET', body){
 			return { questions: buildMockQuestions(15) };
 		}
 		if (path.includes('responder')) {
-			const acertou = body && body.pergunta_id === body.colaborador_escolhido_id;
+			// Em modo mock, sempre simula 70% de acerto
+			const acertou = Math.random() > 0.3;
 			return { ok: true, acertou };
 		}
 		if (path.includes('resultado')) {
@@ -213,17 +214,16 @@ function renderQuestion(){
 			btn.classList.add('loading');
 
 			try{
-				const resp = await api('/responder.php','POST',{ pergunta_id: q.pergunta_id, colaborador_escolhido_id: opt.id });
+				// Usa q.id (novo formato) ao invés de q.pergunta_id
+				const resp = await api('/responder.php','POST',{ pergunta_id: q.id, colaborador_escolhido_id: opt.id });
 				if (resp.acertou) state.acertos++;
 				state.currentIndex++;
 				if (state.currentIndex < state.total) {
 					renderQuestion();
 				} else {
-					// Salva o resultado no banco
+					// Salva o resultado no banco (não precisa mais enviar colaborador_id/email)
 					try {
 						await api('/salvar_resultado.php','POST',{
-							colaborador_id: state.participante?.id || 0,
-							email: state.participante?.email || '',
 							acertos: state.acertos,
 							total: state.total
 						});

@@ -18,16 +18,12 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Credenciais do banco
-$host = '187.49.226.10';
-$port = 3306;
-$user = 'f137049_tool';
-$password = 'In9@1234qwer';
-$database = 'f137049_in9aut';
+require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/session_manager.php';
 
 try {
-	$conn = new mysqli($host, $user, $password, $database, $port);
-	if ($conn->connect_error) {
+	$conn = getDbConnection();
+	if (!$conn) {
 		echo json_encode(array('success' => false, 'error' => 'Erro de conexão com banco de dados'));
 		exit();
 	}
@@ -37,22 +33,41 @@ try {
 		exit();
 	}
 
+	// VALIDAÇÃO DE TOKEN - CRÍTICO PARA SEGURANÇA
+	$token = getTokenFromHeader();
+	if (!$token) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Token não fornecido'));
+		exit();
+	}
+
+	$session = validateToken($conn, $token);
+	if (!$session) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Sessão inválida ou expirada'));
+		exit();
+	}
+
+	// Verifica se a sessão já foi usada (prevenção de replay attack)
+	if ($session['used']) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Resultado já foi salvo anteriormente'));
+		exit();
+	}
+
 	$raw = file_get_contents('php://input');
 	$decoded = json_decode($raw, true);
 	$body = is_array($decoded) ? $decoded : array();
 
-	$colaborador_id = isset($body['colaborador_id']) ? (int)$body['colaborador_id'] : 0;
-	$email = isset($body['email']) ? trim($body['email']) : '';
 	$acertos = isset($body['acertos']) ? (int)$body['acertos'] : 0;
 	$total = isset($body['total']) ? (int)$body['total'] : 0;
 
-	if ($colaborador_id === 0) {
-		echo json_encode(array('success' => false, 'error' => 'ID do colaborador é obrigatório'));
-		exit();
-	}
+	// USA OS DADOS DA SESSÃO (não confia no que vem do frontend)
+	$colaborador_id = (int)$session['colaborador_id'];
+	$email = $session['email'];
 
-	// Verifica se o colaborador existe
-	$stmtUser = $conn->prepare("SELECT id, email FROM quiz_colaboradores WHERE id = ?");
+	// VALIDAÇÃO ADICIONAL: Verifica se o colaborador da sessão existe e está ativo
+	$stmtUser = $conn->prepare("SELECT id, email, ativo FROM quiz_colaboradores WHERE id = ?");
 	$stmtUser->bind_param('i', $colaborador_id);
 	$stmtUser->execute();
 	$resultUser = $stmtUser->get_result();
@@ -65,6 +80,12 @@ try {
 
 	$colaboradorData = $resultUser->fetch_assoc();
 	$stmtUser->close();
+
+	// Verifica se o colaborador está ativo
+	if (!$colaboradorData['ativo']) {
+		echo json_encode(array('success' => false, 'error' => 'Colaborador inativo'));
+		exit();
+	}
 
 	// Verifica se a tabela existe
 	$checkTable = $conn->query("SHOW TABLES LIKE 'quiz_participacoes'");
@@ -109,6 +130,10 @@ try {
 	}
 
 	$stmtInsert->close();
+
+	// MARCA A SESSÃO COMO USADA (previne salvar múltiplas vezes)
+	markSessionAsUsed($conn, $token);
+
 	$conn->close();
 
 	echo json_encode(array(

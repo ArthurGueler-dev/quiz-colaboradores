@@ -1,6 +1,6 @@
 <?php
 // ==========================================
-// Quiz - Responder Pergunta
+// Quiz - Responder Pergunta (Seguro)
 // api/responder.php
 // ==========================================
 
@@ -18,32 +18,76 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/session_manager.php';
+
 try {
 	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 		echo json_encode(array('success' => false, 'error' => 'Método não permitido'));
 		exit();
 	}
 
+	// Valida token
+	$conn = getDbConnection();
+	if (!$conn) {
+		echo json_encode(array('success' => false, 'error' => 'Erro de conexão'));
+		exit();
+	}
+
+	$token = getTokenFromHeader();
+	if (!$token) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Token não fornecido'));
+		exit();
+	}
+
+	$session = validateToken($conn, $token);
+	if (!$session) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Sessão inválida ou expirada'));
+		exit();
+	}
+
+	// Obtém os dados do quiz da sessão
+	$quizData = getQuizDataFromSession($conn, $token);
+	if (!$quizData || !isset($quizData['respostas_corretas'])) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Dados do quiz não encontrados. Reinicie o quiz.'));
+		exit();
+	}
+
+	$respostas_corretas = $quizData['respostas_corretas'];
+
+	// Obtém dados enviados pelo frontend
 	$raw = file_get_contents('php://input');
 	$decoded = json_decode($raw, true);
 	$body = is_array($decoded) ? $decoded : array();
 
-	$pergunta_id = isset($body['pergunta_id']) ? (int)$body['pergunta_id'] : 0;
+	$pergunta_id = isset($body['pergunta_id']) ? trim($body['pergunta_id']) : '';
 	$colaborador_escolhido_id = isset($body['colaborador_escolhido_id']) ? (int)$body['colaborador_escolhido_id'] : 0;
 
-	if ($pergunta_id === 0 || $colaborador_escolhido_id === 0) {
+	if (empty($pergunta_id) || $colaborador_escolhido_id === 0) {
+		$conn->close();
 		echo json_encode(array('success' => false, 'error' => 'Dados inválidos'));
 		exit();
 	}
 
-	// A resposta está correta se o ID escolhido é igual ao ID da pergunta
-	$acertou = ($pergunta_id === $colaborador_escolhido_id);
+	// Verifica se a pergunta existe nas respostas corretas
+	if (!isset($respostas_corretas[$pergunta_id])) {
+		$conn->close();
+		echo json_encode(array('success' => false, 'error' => 'Pergunta não encontrada'));
+		exit();
+	}
+
+	// Valida a resposta usando os dados SEGUROS do backend
+	$resposta_correta = $respostas_corretas[$pergunta_id];
+	$acertou = ($colaborador_escolhido_id === (int)$resposta_correta);
+
+	$conn->close();
 
 	echo json_encode(array(
 		'ok' => true,
-		'acertou' => $acertou,
-		'pergunta_id' => $pergunta_id,
-		'colaborador_escolhido_id' => $colaborador_escolhido_id
+		'acertou' => $acertou
 	));
 
 } catch (Exception $e) {

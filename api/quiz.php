@@ -1,174 +1,146 @@
 <?php
 // ==========================================
-// Quiz - Buscar Perguntas
+// Quiz - API de Perguntas (Segura)
 // api/quiz.php
 // ==========================================
 
+header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, authorization");
-header("Access-Control-Allow-Credentials: true");
-header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	exit(0);
+    exit(0);
 }
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/session_manager.php';
 
-// Credenciais do banco
-$host = '187.49.226.10';
-$port = 3306;
-$user = 'f137049_tool';
-$password = 'In9@1234qwer';
-$database = 'f137049_in9aut';
-
-try {
-	$conn = new mysqli($host, $user, $password, $database, $port);
-	if ($conn->connect_error) {
-		echo json_encode(array('success' => false, 'error' => 'Erro de conexão com banco de dados'));
-		exit();
-	}
-
-	// Busca todos os colaboradores que têm fotos (ambas)
-	$result = $conn->query("
-		SELECT id, nome, foto_adulto, foto_crianca
-		FROM quiz_colaboradores
-		WHERE foto_crianca IS NOT NULL
-		AND foto_crianca != ''
-		AND foto_adulto IS NOT NULL
-		AND foto_adulto != ''
-		ORDER BY RAND()
-	");
-
-	$colaboradores = array();
-	while ($row = $result->fetch_assoc()) {
-		$colaboradores[] = array(
-			'id' => (int)$row['id'],
-			'nome' => $row['nome'],
-			'foto_adulto' => $row['foto_adulto'],
-			'foto_crianca' => $row['foto_crianca']
-		);
-	}
-
-	// Se não houver colaboradores suficientes, retorna dados mock
-	if (count($colaboradores) < 3) {
-		// Dados mock para demonstração
-		$colaboradores = array(
-			array('id' => 1, 'nome' => 'Ana Souza', 'foto_adulto' => 'https://placehold.co/600x400?text=Ana+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Ana+Criança'),
-			array('id' => 2, 'nome' => 'Bruno Lima', 'foto_adulto' => 'https://placehold.co/600x400?text=Bruno+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Bruno+Criança'),
-			array('id' => 3, 'nome' => 'Carla Dias', 'foto_adulto' => 'https://placehold.co/600x400?text=Carla+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Carla+Criança'),
-			array('id' => 4, 'nome' => 'Diego Nunes', 'foto_adulto' => 'https://placehold.co/600x400?text=Diego+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Diego+Criança'),
-			array('id' => 5, 'nome' => 'Elisa Prado', 'foto_adulto' => 'https://placehold.co/600x400?text=Elisa+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Elisa+Criança'),
-			array('id' => 6, 'nome' => 'Fábio Alves', 'foto_adulto' => 'https://placehold.co/600x400?text=Fabio+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Fabio+Criança'),
-			array('id' => 7, 'nome' => 'Gabi Melo', 'foto_adulto' => 'https://placehold.co/600x400?text=Gabi+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Gabi+Criança'),
-			array('id' => 8, 'nome' => 'Hugo Reis', 'foto_adulto' => 'https://placehold.co/600x400?text=Hugo+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Hugo+Criança'),
-			array('id' => 9, 'nome' => 'Iara Brito', 'foto_adulto' => 'https://placehold.co/600x400?text=Iara+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Iara+Criança'),
-			array('id' => 10, 'nome' => 'João Pedro', 'foto_adulto' => 'https://placehold.co/600x400?text=Joao+Adulto', 'foto_crianca' => 'https://placehold.co/600x400?text=Joao+Criança')
-		);
-	}
-
-	// Gera perguntas (máximo 10)
-	$totalPerguntas = min(10, count($colaboradores));
-	$questions = array();
-
-	// Função para detectar gênero pelo nome
-	function detectarGenero($nome) {
-		$nomeUpper = strtoupper($nome);
-		// Nomes/palavras femininas comuns
-		$femininos = array('MARIA', 'ANA', 'CARLA', 'JULIANA', 'FERNANDA', 'PATRICIA', 'AMANDA', 'CAMILA', 'BEATRIZ', 'LETICIA', 'GABRIELA', 'CAROLINA', 'RAFAELA', 'JULIA', 'LARISSA', 'THAIS', 'NATALIA', 'BRUNA', 'MARIANA', 'JESSICA', 'DEBORA', 'MONICA', 'SANDRA', 'ANDREA', 'CLAUDIA', 'SIMONE', 'VANESSA', 'LUCIANA', 'PRISCILA', 'RENATA', 'SABRINA', 'THAYNARA', 'VICTORIA', 'ALZIRENE', 'CAROLINE', 'DANIELLE', 'DIANNE', 'EVELIN', 'KARLIANY', 'LAIS', 'RAYANE');
-
-		foreach ($femininos as $fem) {
-			if (strpos($nomeUpper, $fem) !== false) {
-				return 'F';
-			}
-		}
-		return 'M'; // Padrão masculino
-	}
-
-	// Embaralha colaboradores
-	shuffle($colaboradores);
-
-	// Array para rastrear IDs já usados
-	$idsUsados = array();
-
-	for ($i = 0; $i < $totalPerguntas; $i++) {
-		$correto = $colaboradores[$i];
-		$generoCorreto = detectarGenero($correto['nome']);
-
-		// Marca como usado
-		$idsUsados[] = $correto['id'];
-
-		// Separa colaboradores por gênero, excluindo já usados
-		$mesmoGenero = array_filter($colaboradores, function($c) use ($correto, $generoCorreto, $idsUsados) {
-			return $c['id'] != $correto['id']
-				&& !in_array($c['id'], $idsUsados)
-				&& detectarGenero($c['nome']) === $generoCorreto;
-		});
-
-		// Seleciona 2 decoys do mesmo gênero
-		$decoys = array();
-		$tentativas = 0;
-
-		// Se não tiver colaboradores suficientes do mesmo gênero, usa todos (exceto já usados)
-		if (count($mesmoGenero) < 2) {
-			$mesmoGenero = array_filter($colaboradores, function($c) use ($correto, $idsUsados) {
-				return $c['id'] != $correto['id'] && !in_array($c['id'], $idsUsados);
-			});
-		}
-
-		$mesmoGeneroArray = array_values($mesmoGenero);
-		shuffle($mesmoGeneroArray);
-
-		while (count($decoys) < 2 && $tentativas < 100 && count($mesmoGeneroArray) > 0) {
-			if (isset($mesmoGeneroArray[$tentativas % count($mesmoGeneroArray)])) {
-				$candidato = $mesmoGeneroArray[$tentativas % count($mesmoGeneroArray)];
-
-				// Verifica se não está repetido
-				$jaAdicionado = false;
-				foreach ($decoys as $d) {
-					if ($d['id'] === $candidato['id']) {
-						$jaAdicionado = true;
-						break;
-					}
-				}
-
-				if (!$jaAdicionado) {
-					$decoys[] = $candidato;
-					$idsUsados[] = $candidato['id']; // Marca como usado
-				}
-			}
-			$tentativas++;
-		}
-
-		// Monta opções (1 correta + 2 erradas)
-		$opcoes = array_merge(array($correto), $decoys);
-		shuffle($opcoes); // Embaralha para não ser sempre a primeira
-
-		// Monta a pergunta
-		$questions[] = array(
-			'pergunta_id' => $correto['id'],
-			'foto_crianca' => $correto['foto_crianca'],
-			'opcoes' => array_map(function($opt) {
-				return array(
-					'id' => $opt['id'],
-					'nome' => $opt['nome'],
-					'foto_adulto' => $opt['foto_adulto']
-				);
-			}, $opcoes)
-		);
-	}
-
-	$conn->close();
-
-	echo json_encode(array(
-		'success' => true,
-		'questions' => $questions,
-		'total' => count($questions)
-	));
-
-} catch (Exception $e) {
-	echo json_encode(array('success' => false, 'error' => 'Erro interno', 'message' => $e->getMessage()));
+$conn = getDbConnection();
+if (!$conn) {
+    die('{"success":false,"error":"Erro de conexão com banco de dados"}');
 }
+
+// Cria tabela de sessões se não existir
+createSessionsTable($conn);
+
+// Valida token
+$token = getTokenFromHeader();
+if (!$token) {
+    $conn->close();
+    die('{"success":false,"error":"Token não fornecido"}');
+}
+
+$session = validateToken($conn, $token);
+if (!$session) {
+    $conn->close();
+    die('{"success":false,"error":"Sessão inválida ou expirada"}');
+}
+
+// Verifica se já foi usado
+if ($session['used']) {
+    $conn->close();
+    die('{"success":false,"error":"Você já completou o quiz"}');
+}
+
+$result = $conn->query("SELECT id, nome, foto_adulto, foto_crianca FROM quiz_colaboradores WHERE foto_crianca != '' AND foto_adulto != '' ORDER BY RAND()");
+
+$mulheres = array('ALZIRENE RAMBO','CAROLINE LIMA VIEIRA','DANIELLE CARDOSO','DIANNE MOURA','EVELIN MARTINS','KARLIANY DOS SANTOS','LAIS MELLO','MARIA EDUARDA AGUIAR','RAYANE GUSS MACHADO','SABRINA SARMENTO','VICTORIA SANTOS','THAYNARA OLIVEIRA');
+
+$base = 'https://floripa.in9automacao.com.br';
+$mulheresColabs = array();
+$homensColabs = array();
+
+while ($row = $result->fetch_assoc()) {
+    $colab = array(
+        'id' => $row['id'],
+        'nome' => utf8_encode($row['nome']),
+        'foto_adulto' => $base . $row['foto_adulto'],
+        'foto_crianca' => $base . $row['foto_crianca']
+    );
+
+    $ehMulher = false;
+    $nomeUpper = strtoupper(trim($row['nome']));
+    foreach ($mulheres as $m) {
+        if ($nomeUpper === strtoupper(trim($m))) {
+            $ehMulher = true;
+            break;
+        }
+    }
+
+    if ($ehMulher) {
+        $mulheresColabs[] = $colab;
+    } else {
+        $homensColabs[] = $colab;
+    }
+}
+
+$conn->close();
+
+shuffle($mulheresColabs);
+shuffle($homensColabs);
+
+$questions = array();
+$maxMulheres = min(5, floor(count($mulheresColabs) / 3));
+$maxHomens = min(10, floor(count($homensColabs) / 3));
+
+// Array para armazenar respostas corretas (NUNCA enviado ao frontend)
+$respostas_corretas = array();
+
+for ($i = 0; $i < $maxMulheres; $i++) {
+    $idx = $i * 3;
+    $c = $mulheresColabs[$idx];
+    $opcoes = array(
+        array('id' => $mulheresColabs[$idx]['id'], 'nome' => $mulheresColabs[$idx]['nome'], 'foto_adulto' => $mulheresColabs[$idx]['foto_adulto']),
+        array('id' => $mulheresColabs[$idx+1]['id'], 'nome' => $mulheresColabs[$idx+1]['nome'], 'foto_adulto' => $mulheresColabs[$idx+1]['foto_adulto']),
+        array('id' => $mulheresColabs[$idx+2]['id'], 'nome' => $mulheresColabs[$idx+2]['nome'], 'foto_adulto' => $mulheresColabs[$idx+2]['foto_adulto'])
+    );
+    shuffle($opcoes);
+
+    // Gera ID único para a pergunta (NÃO revela a resposta correta)
+    $pergunta_uid = uniqid('q_', true);
+
+    // Armazena resposta correta no backend
+    $respostas_corretas[$pergunta_uid] = $c['id'];
+
+    // Envia ao frontend SEM a resposta correta
+    $questions[] = array(
+        'id' => $pergunta_uid,  // ID único da pergunta (não revela resposta)
+        'foto_crianca' => $c['foto_crianca'],
+        'opcoes' => $opcoes
+    );
+}
+
+for ($i = 0; $i < $maxHomens; $i++) {
+    $idx = $i * 3;
+    $c = $homensColabs[$idx];
+    $opcoes = array(
+        array('id' => $homensColabs[$idx]['id'], 'nome' => $homensColabs[$idx]['nome'], 'foto_adulto' => $homensColabs[$idx]['foto_adulto']),
+        array('id' => $homensColabs[$idx+1]['id'], 'nome' => $homensColabs[$idx+1]['nome'], 'foto_adulto' => $homensColabs[$idx+1]['foto_adulto']),
+        array('id' => $homensColabs[$idx+2]['id'], 'nome' => $homensColabs[$idx+2]['nome'], 'foto_adulto' => $homensColabs[$idx+2]['foto_adulto'])
+    );
+    shuffle($opcoes);
+
+    // Gera ID único para a pergunta (NÃO revela a resposta correta)
+    $pergunta_uid = uniqid('q_', true);
+
+    // Armazena resposta correta no backend
+    $respostas_corretas[$pergunta_uid] = $c['id'];
+
+    // Envia ao frontend SEM a resposta correta
+    $questions[] = array(
+        'id' => $pergunta_uid,  // ID único da pergunta (não revela resposta)
+        'foto_crianca' => $c['foto_crianca'],
+        'opcoes' => $opcoes
+    );
+}
+
+shuffle($questions);
+
+// Salva as respostas corretas na sessão (SEGURO - apenas no backend)
+saveQuizDataToSession($conn, $token, array('respostas_corretas' => $respostas_corretas));
+
+$conn->close();
+
+// Envia apenas as perguntas ao frontend (SEM as respostas corretas)
+echo json_encode(array('success' => true, 'questions' => $questions, 'total' => count($questions)));

@@ -18,19 +18,19 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Credenciais do banco
-$host = '187.49.226.10';
-$port = 3306;
-$user = 'f137049_tool';
-$password = 'In9@1234qwer';
-$database = 'f137049_in9aut';
+require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/session_manager.php';
 
 try {
-	$conn = new mysqli($host, $user, $password, $database, $port);
-	if ($conn->connect_error) {
+	$conn = getDbConnection();
+	if (!$conn) {
 		echo json_encode(array('success' => false, 'error' => 'Erro de conexão com banco de dados'));
 		exit();
 	}
+
+	// Cria tabelas necessárias se não existirem
+	createSessionsTable($conn);
+	createEmailVerificationTable($conn);
 
 	$method = $_SERVER['REQUEST_METHOD'];
 
@@ -128,11 +128,12 @@ try {
 		}
 		$stmtCheck->close();
 
-		// Gera token único para a sessão (compatível com PHP 5.x)
-		if (function_exists('random_bytes')) {
-			$token = bin2hex(random_bytes(32));
-		} else {
-			$token = bin2hex(openssl_random_pseudo_bytes(32));
+		// Cria sessão segura para o colaborador
+		$token = createSession($conn, $userData['id'], $userData['email']);
+
+		if (!$token) {
+			echo json_encode(array('success' => false, 'error' => 'Erro ao criar sessão'));
+			exit();
 		}
 
 		// Resposta de sucesso (SEM enviar senha)
@@ -140,11 +141,15 @@ try {
 			'id' => $userData['id'],
 			'nome' => $userData['nome'],
 			'email' => $userData['email'],
-			'cpf' => $userData['cpf'],
-			'token' => $token
+			'cpf' => $userData['cpf']
 		);
 
-		echo json_encode(array('success' => true, 'message' => 'Login realizado com sucesso', 'participante' => $responseUser, 'token' => $token));
+		echo json_encode(array(
+			'success' => true,
+			'message' => 'Login realizado com sucesso',
+			'participante' => $responseUser,
+			'token' => $token
+		));
 
 	} else {
 		echo json_encode(array(
