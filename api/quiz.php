@@ -81,56 +81,72 @@ shuffle($mulheresColabs);
 shuffle($homensColabs);
 
 $questions = array();
-$maxMulheres = min(5, floor(count($mulheresColabs) / 3));
-$maxHomens = min(10, floor(count($homensColabs) / 3));
 
 // Array para armazenar respostas corretas (NUNCA enviado ao frontend)
 $respostas_corretas = array();
 
-for ($i = 0; $i < $maxMulheres; $i++) {
-    $idx = $i * 3;
-    $c = $mulheresColabs[$idx];
+// Cria pergunta para CADA mulher
+foreach ($mulheresColabs as $idx => $correta) {
+    // Seleciona 2 mulheres aleatórias diferentes da correta
+    $decoys = array();
+    $tentativas = 0;
+    while (count($decoys) < 2 && $tentativas < 100) {
+        $randomIdx = array_rand($mulheresColabs);
+        if ($randomIdx !== $idx && !in_array($randomIdx, $decoys)) {
+            $decoys[] = $randomIdx;
+        }
+        $tentativas++;
+    }
+
+    // Se não conseguiu 2 decoys, pula esta pergunta
+    if (count($decoys) < 2) continue;
+
     $opcoes = array(
-        array('id' => $mulheresColabs[$idx]['id'], 'nome' => $mulheresColabs[$idx]['nome'], 'foto_adulto' => $mulheresColabs[$idx]['foto_adulto']),
-        array('id' => $mulheresColabs[$idx+1]['id'], 'nome' => $mulheresColabs[$idx+1]['nome'], 'foto_adulto' => $mulheresColabs[$idx+1]['foto_adulto']),
-        array('id' => $mulheresColabs[$idx+2]['id'], 'nome' => $mulheresColabs[$idx+2]['nome'], 'foto_adulto' => $mulheresColabs[$idx+2]['foto_adulto'])
+        array('id' => $correta['id'], 'nome' => $correta['nome'], 'foto_adulto' => $correta['foto_adulto']),
+        array('id' => $mulheresColabs[$decoys[0]]['id'], 'nome' => $mulheresColabs[$decoys[0]]['nome'], 'foto_adulto' => $mulheresColabs[$decoys[0]]['foto_adulto']),
+        array('id' => $mulheresColabs[$decoys[1]]['id'], 'nome' => $mulheresColabs[$decoys[1]]['nome'], 'foto_adulto' => $mulheresColabs[$decoys[1]]['foto_adulto'])
     );
     shuffle($opcoes);
 
-    // Gera ID único para a pergunta (NÃO revela a resposta correta)
     $pergunta_uid = uniqid('q_', true);
+    $respostas_corretas[$pergunta_uid] = $correta['id'];
 
-    // Armazena resposta correta no backend
-    $respostas_corretas[$pergunta_uid] = $c['id'];
-
-    // Envia ao frontend SEM a resposta correta
     $questions[] = array(
-        'id' => $pergunta_uid,  // ID único da pergunta (não revela resposta)
-        'foto_crianca' => $c['foto_crianca'],
+        'id' => $pergunta_uid,
+        'foto_crianca' => $correta['foto_crianca'],
         'opcoes' => $opcoes
     );
 }
 
-for ($i = 0; $i < $maxHomens; $i++) {
-    $idx = $i * 3;
-    $c = $homensColabs[$idx];
+// Cria pergunta para CADA homem
+foreach ($homensColabs as $idx => $correta) {
+    // Seleciona 2 homens aleatórios diferentes do correto
+    $decoys = array();
+    $tentativas = 0;
+    while (count($decoys) < 2 && $tentativas < 100) {
+        $randomIdx = array_rand($homensColabs);
+        if ($randomIdx !== $idx && !in_array($randomIdx, $decoys)) {
+            $decoys[] = $randomIdx;
+        }
+        $tentativas++;
+    }
+
+    // Se não conseguiu 2 decoys, pula esta pergunta
+    if (count($decoys) < 2) continue;
+
     $opcoes = array(
-        array('id' => $homensColabs[$idx]['id'], 'nome' => $homensColabs[$idx]['nome'], 'foto_adulto' => $homensColabs[$idx]['foto_adulto']),
-        array('id' => $homensColabs[$idx+1]['id'], 'nome' => $homensColabs[$idx+1]['nome'], 'foto_adulto' => $homensColabs[$idx+1]['foto_adulto']),
-        array('id' => $homensColabs[$idx+2]['id'], 'nome' => $homensColabs[$idx+2]['nome'], 'foto_adulto' => $homensColabs[$idx+2]['foto_adulto'])
+        array('id' => $correta['id'], 'nome' => $correta['nome'], 'foto_adulto' => $correta['foto_adulto']),
+        array('id' => $homensColabs[$decoys[0]]['id'], 'nome' => $homensColabs[$decoys[0]]['nome'], 'foto_adulto' => $homensColabs[$decoys[0]]['foto_adulto']),
+        array('id' => $homensColabs[$decoys[1]]['id'], 'nome' => $homensColabs[$decoys[1]]['nome'], 'foto_adulto' => $homensColabs[$decoys[1]]['foto_adulto'])
     );
     shuffle($opcoes);
 
-    // Gera ID único para a pergunta (NÃO revela a resposta correta)
     $pergunta_uid = uniqid('q_', true);
+    $respostas_corretas[$pergunta_uid] = $correta['id'];
 
-    // Armazena resposta correta no backend
-    $respostas_corretas[$pergunta_uid] = $c['id'];
-
-    // Envia ao frontend SEM a resposta correta
     $questions[] = array(
-        'id' => $pergunta_uid,  // ID único da pergunta (não revela resposta)
-        'foto_crianca' => $c['foto_crianca'],
+        'id' => $pergunta_uid,
+        'foto_crianca' => $correta['foto_crianca'],
         'opcoes' => $opcoes
     );
 }
