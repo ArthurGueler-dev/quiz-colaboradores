@@ -154,7 +154,7 @@ try {
 
 	// Insere o resultado com nome, CPF e tempo formatado
 	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, nome, cpf, email, acertos, total, tempo_total_segundos, tempo_formatado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-	$stmtInsert->bind_param('isssiius', $colaborador_id, $colaboradorData['nome'], $colaboradorData['cpf'], $colaboradorData['email'], $acertos, $total, $tempo_total_segundos, $tempo_formatado);
+	$stmtInsert->bind_param('isssiiis', $colaborador_id, $colaboradorData['nome'], $colaboradorData['cpf'], $colaboradorData['email'], $acertos, $total, $tempo_total_segundos, $tempo_formatado);
 
 	if (!$stmtInsert->execute()) {
 		echo json_encode(array('success' => false, 'error' => 'Erro ao salvar resultado'));
