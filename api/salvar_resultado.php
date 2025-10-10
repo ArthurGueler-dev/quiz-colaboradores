@@ -141,9 +141,20 @@ try {
 		$conn->query("ALTER TABLE quiz_participacoes ADD INDEX idx_cpf (cpf)");
 	}
 
-	// Insere o resultado com nome e CPF
-	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, nome, cpf, email, acertos, total, tempo_total_segundos) VALUES (?, ?, ?, ?, ?, ?, ?)");
-	$stmtInsert->bind_param('isssiii', $colaborador_id, $colaboradorData['nome'], $colaboradorData['cpf'], $colaboradorData['email'], $acertos, $total, $tempo_total_segundos);
+	// Verifica e adiciona coluna tempo_formatado se não existir
+	$checkTempoFormatado = $conn->query("SHOW COLUMNS FROM quiz_participacoes LIKE 'tempo_formatado'");
+	if ($checkTempoFormatado->num_rows === 0) {
+		$conn->query("ALTER TABLE quiz_participacoes ADD COLUMN tempo_formatado VARCHAR(10) DEFAULT NULL AFTER tempo_total_segundos");
+	}
+
+	// Formata o tempo em MM:SS
+	$minutos = floor($tempo_total_segundos / 60);
+	$segundos = $tempo_total_segundos % 60;
+	$tempo_formatado = sprintf('%02d:%02d', $minutos, $segundos);
+
+	// Insere o resultado com nome, CPF e tempo formatado
+	$stmtInsert = $conn->prepare("INSERT INTO quiz_participacoes (colaborador_id, nome, cpf, email, acertos, total, tempo_total_segundos, tempo_formatado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+	$stmtInsert->bind_param('isssiius', $colaborador_id, $colaboradorData['nome'], $colaboradorData['cpf'], $colaboradorData['email'], $acertos, $total, $tempo_total_segundos, $tempo_formatado);
 
 	if (!$stmtInsert->execute()) {
 		echo json_encode(array('success' => false, 'error' => 'Erro ao salvar resultado'));
